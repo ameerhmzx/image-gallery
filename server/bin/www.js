@@ -6,8 +6,19 @@
 
 import app from '../app.js';
 import http from 'http';
+import fadmin from 'firebase-admin';
 
 import { connectDb } from '../models/index.js';
+
+// Initialize firebase admin
+console.log("[storage] connecting...");
+var secret = JSON.parse(process.env.firebase_json);
+fadmin.initializeApp({
+  credential: fadmin.credential.cert(secret),
+  storageBucket: process.env.BUCKET_URL
+});
+app.locals.bucket = fadmin.storage().bucket()
+console.log("[storage] connected.");
 
 /**
  * Get port from environment and store in Express.

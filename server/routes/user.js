@@ -10,7 +10,7 @@ router.post('/login', async function (req, res, next) {
     try {
         const user = await User.findOne({ 'email': req.body.email });
         user.comparePassword(req.body.password, function (err, isMatch) {
-            if(err) 
+            if (err)
                 return res.sendStatus(400);
             if (isMatch) {
                 return res.status(200).json({

@@ -4,24 +4,26 @@ import logger from 'morgan';
 import cors from "cors";
 import jwt from "express-jwt";
 import compression from 'compression';
+
 import userRouter from './routes/user.js';
 import folderRouter from './routes/folder.js';
+
 import dotenv from 'dotenv';
 
 /* Load .env Variables in dev
  * Heroku configVars will be used instead.
  */
-if(process.env.NODE_ENV != "production"){
-  dotenv.config({ debug: process.env.DEBUG });
-} 
+if (process.env.NODE_ENV != "production") {
+    dotenv.config({ debug: process.env.DEBUG });
+}
 
 var app = express();
 
 app.use(logger('dev'));
 app.use(cors());
 app.use(compression());
-app.use(express.json({limit: '50mb'}));
-app.use(express.urlencoded({limit: '50mb', extended: false}));
+app.use(express.json({ limit: '6mb' }));
+app.use(express.urlencoded({ limit: '6mb', extended: false }));
 app.use(jwt({
     secret: process.env.jsecret,
     algorithms: ['HS256'],
@@ -36,15 +38,13 @@ app.use(function (req, res, next) {
 });
 
 app.use(function (err, req, res, next) {
-    // res.locals.message = err.message;
-    var err = process.env.NODE_ENV == 'production' ? {} : err;
-    
     res.status(err.status || 500);
+    var err = process.env.NODE_ENV == 'production' ? {} : err;
 
     return res.json({
-      status: 'error',
-      error: err,
-      message: err.message
+        status: 'error',
+        error: err,
+        message: err.message
     });
 });
 
