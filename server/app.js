@@ -14,7 +14,7 @@ import dotenv from 'dotenv';
  * Heroku configVars will be used instead.
  */
 if (process.env.NODE_ENV != "production") {
-    dotenv.config({ debug: process.env.DEBUG });
+    dotenv.config({ debug: true });
 }
 
 var app = express();

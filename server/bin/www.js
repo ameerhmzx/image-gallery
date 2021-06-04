@@ -7,8 +7,7 @@
 import app from '../app.js';
 import http from 'http';
 import fadmin from 'firebase-admin';
-
-import { connectDb } from '../models/index.js';
+import mongoose from 'mongoose';
 
 // Initialize firebase admin
 console.log("[storage] connecting...");
@@ -34,10 +33,20 @@ app.set('port', port);
 var server = http.createServer(app);
 
 /**
- * Listen on provided port, on all network interfaces.
+ * Connect to DB then Start Server.
  */
 console.log(`[db] connecting...`);
-connectDb(process.env.mongo_host, process.env.mongo_user, process.env.mongo_pass).then(async () => {
+
+mongoose.set('useNewUrlParser', true);
+mongoose.set('useFindAndModify', false);
+mongoose.set('useCreateIndex', true);
+mongoose.set('useUnifiedTopology', true);
+
+mongoose.connect(`mongodb+srv://${process.env.mongo_user}:${process.env.mongo_pass}@${process.env.mongo_host}/gallery?retryWrites=true&w=majority`, {
+  "auth": {
+    "authSource": "admin"
+  },
+}).then(() => {
   console.log('[db] connected.');
   server.listen(port);
   server.on('error', onError);
@@ -51,15 +60,11 @@ connectDb(process.env.mongo_host, process.env.mongo_user, process.env.mongo_pass
 function normalizePort(val) {
   var port = parseInt(val, 10);
 
-  if (isNaN(port)) {
-    // named pipe
+  if (isNaN(port))
     return val;
-  }
 
-  if (port >= 0) {
-    // port number
+  if (port >= 0)
     return port;
-  }
 
   return false;
 }

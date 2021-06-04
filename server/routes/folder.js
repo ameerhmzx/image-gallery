@@ -275,7 +275,7 @@ router.get('/:folder/images', authenticated, async (req, res, next) => {
 
         var images = await Image.findMany({ folder: folder._id }).sort({ createdAt: 'desc' });
 
-        images.map((image) => image.path = await getImageDownloadUrl(req, image.path));
+        images.map(async (image) => image.path = await getImageDownloadUrl(req, image.path));
 
         return res.status(200).json({
             status: 'success',

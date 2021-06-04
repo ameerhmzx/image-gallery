@@ -2,18 +2,19 @@ import mongoose from 'mongoose';
 
 const imageSchema = new mongoose.Schema(
     {
-        path: String,
-        required: true,
-        unique: true
-    },
-    {
+        path: {
+            type: String,
+            required: true,
+            unique: true
+        },
         folder: {
             type: mongoose.Types.ObjectId,
-            ref: 'folder'
+            ref: 'folder',
+            required: true
         },
-        required: true
     },
-    { collection: 'images', }, { timestamps: true },
+    { collection: 'images', },
+    { timestamps: true }
 );
 
 
