@@ -5,8 +5,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "export NODE_ENV=production && node ./bin/www",
-    "dev": "nodemon ./bin/www"
+    "start": "export NODE_ENV=production && node ./server/bin/www",
+    "web": "export NODE_ENV=production && node ./server/bin/www",
+    "dev": "nodemon ./server/bin/www"
   },
   "author": "",
   "license": "ISC",
