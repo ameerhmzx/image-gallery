@@ -21,9 +21,7 @@ jobs:
           rm -rf .git
           rm -rf .gitignore
           git init
-          cat > ~/.gitignore <<EOF
-            node_modules
-          EOF
+          sed -i -e "/app\/build/d" .gitignore
           cat > ~/.netrc <<EOF
             machine api.heroku.com
               login $HEROKU_EMAIL
@@ -47,4 +45,4 @@ jobs:
           git config user.name "Github"
           git add .
           git commit -m "deployment"
-          git push heroku master
+          git push -f heroku master
