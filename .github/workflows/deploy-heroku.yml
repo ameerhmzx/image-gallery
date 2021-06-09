@@ -36,4 +36,7 @@ jobs:
           HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME }}
 
       - name: Push to Heroku
-        run: git push heroku master
+        run: | 
+          git add .
+          git commit -m "deployment"
+          git push -u heroku master
