@@ -37,6 +37,8 @@ jobs:
 
       - name: Push to Heroku
         run: | 
+          git config user.email ${{ secrets.HEROKU_EMAIL }}
+          git config user.name "Github"
           git add .
           git commit -m "deployment"
           git push -u heroku master
