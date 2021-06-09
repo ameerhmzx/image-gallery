@@ -53,7 +53,7 @@ router.post('/register', async function (req, res, next) {
     } catch (err) {
         if (err.code === 11000)
             res.status(409);
-        next(err.errors);
+        next(err);
     }
 });
 
