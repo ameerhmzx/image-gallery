@@ -1,5 +1,10 @@
+name: Build React App
+on:
+  push:
+   branches: ['main']
+
 jobs:
-  custom-deploy:
+  heroku-custom-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
