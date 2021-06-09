@@ -37,8 +37,10 @@ jobs:
 
       - name: Push to Heroku
         run: | 
+          rm -rf .git
+          git init
           git config user.email ${{ secrets.HEROKU_EMAIL }}
           git config user.name "Github"
           git add .
           git commit -m "deployment"
-          git push heroku main
+          git push heroku master
