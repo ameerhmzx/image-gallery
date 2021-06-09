@@ -9,6 +9,14 @@ router.post('/login', async function (req, res, next) {
     res.setHeader('Content-Type', 'application/json');
     try {
         const user = await User.findOne({ 'email': req.body.email });
+
+        if(user.length == 0)
+            return res.status(401).json({
+                status: 'fail',
+                code: 'err-wrong-email',
+                message: 'User not found!'
+            });
+
         user.comparePassword(req.body.password, function (err, isMatch) {
             if (err)
                 return res.sendStatus(400);
@@ -22,15 +30,13 @@ router.post('/login', async function (req, res, next) {
             } else {
                 return res.status(401).json({
                     status: 'fail',
-                    message: 'wrong credentials!'
+                    code: 'err-wrong-pass',
+                    message: 'Wrong Password!'
                 });
             }
         });
     } catch (err) {
-        return res.status(401).json({
-            status: 'fail',
-            message: 'wrong credentials!'
-        });
+        next(err);
     }
 });
 
@@ -40,6 +46,9 @@ router.post('/register', async function (req, res, next) {
         const user = await User.create(req.body);
         return res.status(200).json({
             status: 'success',
+            token: jwt.sign({
+                id: user._id
+            }, process.env.jsecret)
         });
     } catch (err) {
         if (err.code === 11000)

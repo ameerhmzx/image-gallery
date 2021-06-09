@@ -4,6 +4,7 @@ import logger from 'morgan';
 import cors from "cors";
 import jwt from "express-jwt";
 import compression from 'compression';
+import path from 'path';
 
 import userRouter from './routes/user.js';
 import folderRouter from './routes/folder.js';
@@ -19,6 +20,9 @@ if (process.env.NODE_ENV != "production") {
 
 var app = express();
 
+/**
+ * Middlewares Configuration
+ */
 app.use(logger('dev'));
 app.use(cors());
 app.use(compression());
@@ -30,13 +34,24 @@ app.use(jwt({
     credentialsRequired: false
 }));
 
+/**
+ * Api Routes
+ */
 app.use('/api/user', userRouter);
 app.use('/api/folder', folderRouter);
 
-app.use(function (req, res, next) {
-    next(createError(404));
+/**
+ * Serving React App
+ */
+const reactPath = new URL('../app/build', import.meta.url).pathname;
+app.use(express.static(reactPath));
+app.use('(/*)?', async (req, res, next) => {
+    res.sendFile(path.join(reactPath, 'index.html'));
 });
 
+/**
+ * Error Handler
+ */
 app.use(function (err, req, res, next) {
     res.status(err.status || 500);
     var err = process.env.NODE_ENV == 'production' ? {} : err;
