@@ -41,18 +41,9 @@ app.use('/api/user', userRouter);
 app.use('/api/folder', folderRouter);
 
 /**
- * Serving React App
- */
-const reactPath = new URL('../app/build', import.meta.url).pathname;
-app.use(express.static(reactPath));
-app.use('(/*)?', async (req, res, next) => {
-    res.sendFile(path.join(reactPath, 'index.html'));
-});
-
-/**
  * Error Handler
  */
-app.use(function (err, req, res, next) {
+ app.use(function (err, req, res, next) {
     res.status(err.status || 500);
     var err = process.env.NODE_ENV == 'production' ? {} : err;
 
@@ -61,6 +52,15 @@ app.use(function (err, req, res, next) {
         error: err,
         message: err.message
     });
+});
+
+/**
+ * Serving React App
+ */
+const reactPath = new URL('../app/build', import.meta.url).pathname;
+app.use(express.static(reactPath));
+app.use('(/*)?', async (req, res, next) => {
+    res.sendFile(path.join(reactPath, 'index.html'));
 });
 
 export default app;
