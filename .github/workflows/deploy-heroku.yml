@@ -19,7 +19,6 @@ jobs:
       - name: Heroku login credentials
         run: |
           rm -rf .git
-          rm -rf .gitignore
           git init
           sed -i -e "/app\/build/d" .gitignore
           cat > ~/.netrc <<EOF
