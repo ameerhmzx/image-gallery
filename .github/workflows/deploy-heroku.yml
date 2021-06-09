@@ -19,6 +19,7 @@ jobs:
       - name: Heroku login credentials
         run: |
           rm -rf .git
+          rm -rf .gitignore
           git init
           cat > ~/.netrc <<EOF
             machine api.heroku.com
