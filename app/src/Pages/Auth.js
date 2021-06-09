@@ -1,8 +1,10 @@
 import AuthContext from "../Context/AuthContext";
+import LoadingContext from "../Context/LoadingContext";
 import {Switch, Route, Link} from "react-router-dom";
 import {useContext, useState} from "react";
 import {AtSymbolIcon, LockClosedIcon, LockOpenIcon, UserIcon} from "@heroicons/react/solid";
 import {LoginIcon, UserAddIcon} from "@heroicons/react/outline";
+import ToastContext from "../Context/ToastContext";
 
 function classNames(...classes) {
     return classes.filter(Boolean).join(' ')
@@ -11,10 +13,13 @@ function classNames(...classes) {
 export default function Auth() {
 
     const {changeAuthState} = useContext(AuthContext);
+    const {setLoading} = useContext(LoadingContext);
+    const {showToast} = useContext(ToastContext);
+
     const [formState, setFormState] = useState({
+        name: '',
         email: '',
         pass: '',
-        name: '',
         con_pass: '',
         err_email: '',
         err_pass: '',
@@ -25,7 +30,7 @@ export default function Auth() {
     function loginHandler(event) {
         event.preventDefault();
         if (validateAllFields(false)) {
-            // TODO: Show loading
+            setLoading(true);
             fetch(`${process.env.REACT_APP_SERVER_URL}/user/login`, {
                 method: 'POST',
                 headers: {
@@ -38,14 +43,21 @@ export default function Auth() {
             })
                 .then((res) => res.json())
                 .then((response) => {
-                    console.log(response);
+                    setLoading(false);
                     if (response['status'] === 'success' && response['token'] !== undefined) {
                         sessionStorage.setItem('jwtToken', response['token']);
                         changeAuthState(true);
-                    } else if (response['status'] === 'fail') {
-                        // TODO: display Error
+                    } else if (response['status'] === 'fail' || response['status'] === 'error') {
+                        if (response['code'] === 'err-wrong-pass')
+                            showToast({title: 'Unable to Login', text: 'Wrong credentials', type: 'fail'});
+                        else
+                            showToast({
+                                title: 'Unable to Login',
+                                text: 'Can\'t find the user, try registering first.',
+                                type: 'fail'
+                            });
                     } else {
-                        // show error
+                        showToast({title: 'Unable to Login', text: 'Unexpected error occurred!', type: 'fail'});
                     }
                 });
             return true;
@@ -56,7 +68,7 @@ export default function Auth() {
     function registerHandler(event) {
         event.preventDefault();
         if (validateAllFields(true)) {
-            // TODO: Show loading & Register
+            setLoading(true);
             fetch(`${process.env.REACT_APP_SERVER_URL}/user/register`, {
                 method: 'POST',
                 headers: {
@@ -69,14 +81,18 @@ export default function Auth() {
                 })
             }).then((res) => res.json())
                 .then((response) => {
-                    console.log(response);
+                    setLoading(false);
                     if (response['status'] === 'success' && response['token'] !== undefined) {
                         sessionStorage.setItem('jwtToken', response['token']);
                         changeAuthState(true);
-                    } else if (response['status'] === 'fail') {
-                        // TODO: display Error
+                    } else if (response['status'] === 'fail' || response['status'] === 'error') {
+                        showToast({
+                            title: 'Unable to register',
+                            text: 'Either user already existed or some unknown error occurred!',
+                            type: 'fail'
+                        });
                     } else {
-                        // show error
+                        showToast({title: 'Unable to register', text: 'Unexpected error occurred!', type: 'fail'});
                     }
                 });
             return true;
@@ -138,10 +154,10 @@ export default function Auth() {
 
         setFormState(newState);
 
-        return formState.err_email === '' && formState.err_pass === ''
-            && (!isRegistering || (formState.err_con_pass === '' && formState.err_name === ''))
-            && formState.email !== '' && formState.pass !== ''
-            && (!isRegistering || (formState.con_pass !== '' && formState.name !== ''));
+        return newState.err_email === '' && newState.err_pass === ''
+            && (!isRegistering || (newState.err_con_pass === '' && newState.err_name === ''))
+            && newState.email !== '' && newState.pass !== ''
+            && (!isRegistering || (newState.con_pass !== '' && newState.name !== ''));
     }
 
     return (
@@ -196,7 +212,8 @@ export default function Auth() {
                                                 text-gray-500 shadow-sm text-sm">
                                                <AtSymbolIcon className={'w-4 text-gray-500'}/>
                                             </span>
-                                            <input type="text" id="register-email"
+                                            <input type="email"
+                                                   id="register-email"
                                                    name="email"
                                                    required
                                                    onChange={emailFieldListener}
