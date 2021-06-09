@@ -21,6 +21,9 @@ jobs:
           rm -rf .git
           rm -rf .gitignore
           git init
+          cat > ~/.gitignore <<EOF
+            node_modules
+          EOF
           cat > ~/.netrc <<EOF
             machine api.heroku.com
               login $HEROKU_EMAIL
