@@ -8,8 +8,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      
+      - name: Login to Heroku
+        env: 
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: heroku login 
+        
       - name: npm install & build
         working-directory: ./app
         run: |
           npm install
-          npm run build
+          npm run build 
+        
+      - name: Release
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: |
+          git add .
+          git commit -am "release"
+          git push heroku master
