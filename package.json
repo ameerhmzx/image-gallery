@@ -6,7 +6,6 @@
   "type": "module",
   "scripts": {
     "start": "export NODE_ENV=production && node ./server/bin/www",
-    "build": "cd app && npm install && npm run build",
     "dev": "nodemon ./server/bin/www"
   },
   "author": "",
