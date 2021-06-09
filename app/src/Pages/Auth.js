@@ -1,5 +1,5 @@
 import AuthContext from "../Context/AuthContext";
-import {BrowserRouter as Router, Switch, Route, Link} from "react-router-dom";
+import {Switch, Route, Link} from "react-router-dom";
 import {useContext, useState} from "react";
 import {AtSymbolIcon, LockClosedIcon, LockOpenIcon, UserIcon} from "@heroicons/react/solid";
 import {LoginIcon, UserAddIcon} from "@heroicons/react/outline";
@@ -10,7 +10,7 @@ function classNames(...classes) {
 
 export default function Auth() {
 
-    const {authState, changeAuthState} = useContext(AuthContext);
+    const {changeAuthState} = useContext(AuthContext);
     const [formState, setFormState] = useState({
         email: '',
         pass: '',
