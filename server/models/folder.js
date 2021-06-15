@@ -32,7 +32,7 @@ const folderSchema = new mongoose.Schema(
         },
         partners: [partnerSchema]
     },
-    { collection: 'folders', },
+    { collection: 'folders', timestamps: true },
 );
 
 

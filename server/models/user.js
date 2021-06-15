@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 
-var SALT_WORK_FACTOR = 10;
+const SALT_WORK_FACTOR = 10;
 
 const userSchema = new mongoose.Schema(
     {
@@ -21,8 +21,9 @@ const userSchema = new mongoose.Schema(
     { collection: 'users', },
 );
 
+
 userSchema.pre('save', function(next) {
-    var user = this;
+    let user = this;
 
     // only hash the password if it has been modified (or is new)
     if (!user.isModified('password')) return next();
@@ -47,6 +48,7 @@ userSchema.methods.comparePassword = function(candidatePassword, cb) {
         cb(null, isMatch);
     });
 };
+
 
 const User = mongoose.model('users', userSchema);
 

@@ -10,7 +10,7 @@ function classNames(...classes) {
     return classes.filter(Boolean).join(' ')
 }
 
-export default function Auth() {
+export default function AuthPage() {
 
     const {changeAuthState} = useContext(AuthContext);
     const {setLoading} = useContext(LoadingContext);

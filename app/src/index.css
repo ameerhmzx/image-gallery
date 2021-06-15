@@ -24,6 +24,10 @@ code {
     animation: decrease 2s 0.5s infinite;
 }
 
+.min-w-sm {
+    min-width: 8rem;
+}
+
 @keyframes increase {
     from {
         left: -5%;

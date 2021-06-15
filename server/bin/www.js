@@ -6,31 +6,29 @@
 
 import app from '../app.js';
 import http from 'http';
-import fadmin from 'firebase-admin';
+import admin from 'firebase-admin';
 import mongoose from 'mongoose';
 
 // Initialize firebase admin
 console.log("[storage] connecting...");
-var secret = JSON.parse(process.env.firebase_json);
-fadmin.initializeApp({
-  credential: fadmin.credential.cert(secret),
-  storageBucket: process.env.BUCKET_URL
+let secret = JSON.parse(process.env.firebase_json);
+admin.initializeApp({
+    credential: admin.credential.cert(secret),
+    storageBucket: process.env.BUCKET_URL
 });
-app.locals.bucket = fadmin.storage().bucket()
+app.locals.bucket = admin.storage().bucket()
 console.log("[storage] connected.");
 
 /**
  * Get port from environment and store in Express.
  */
-
-var port = normalizePort(process.env.PORT || '3000');
+let port = normalizePort(process.env.PORT || '3000');
 app.set('port', port);
 
 /**
  * Create HTTP server.
  */
-
-var server = http.createServer(app);
+const server = http.createServer(app);
 
 /**
  * Connect to DB then Start Server.
@@ -42,15 +40,19 @@ mongoose.set('useFindAndModify', false);
 mongoose.set('useCreateIndex', true);
 mongoose.set('useUnifiedTopology', true);
 
+const db = mongoose.connection;
+db.on('error', console.error.bind(console, 'connection error:'));
+db.once('open', function() {
+    console.log('[db] connected.');
+    server.listen(port);
+    server.on('error', onError);
+    server.on('listening', onListening);
+});
+
 mongoose.connect(`mongodb+srv://${process.env.mongo_user}:${process.env.mongo_pass}@${process.env.mongo_host}/gallery?retryWrites=true&w=majority`, {
-  "auth": {
-    "authSource": "admin"
-  },
-}).then(() => {
-  console.log('[db] connected.');
-  server.listen(port);
-  server.on('error', onError);
-  server.on('listening', onListening);
+    "auth": {
+        "authSource": "admin"
+    },
 });
 
 /**
@@ -58,15 +60,15 @@ mongoose.connect(`mongodb+srv://${process.env.mongo_user}:${process.env.mongo_pa
  */
 
 function normalizePort(val) {
-  var port = parseInt(val, 10);
+    let port = parseInt(val, 10);
 
-  if (isNaN(port))
-    return val;
+    if (isNaN(port))
+        return val;
 
-  if (port >= 0)
-    return port;
+    if (port >= 0)
+        return port;
 
-  return false;
+    return false;
 }
 
 /**
@@ -74,27 +76,27 @@ function normalizePort(val) {
  */
 
 function onError(error) {
-  if (error.syscall !== 'listen') {
-    throw error;
-  }
+    if (error.syscall !== 'listen') {
+        throw error;
+    }
 
-  var bind = typeof port === 'string'
-    ? 'Pipe ' + port
-    : 'Port ' + port;
+    let bind = typeof port === 'string'
+        ? 'Pipe ' + port
+        : 'Port ' + port;
 
-  // handle specific listen errors with friendly messages
-  switch (error.code) {
-    case 'EACCES':
-      console.error(bind + ' requires elevated privileges');
-      process.exit(1);
-      break;
-    case 'EADDRINUSE':
-      console.error(bind + ' is already in use');
-      process.exit(1);
-      break;
-    default:
-      throw error;
-  }
+    // handle specific listen errors with friendly messages
+    switch (error.code) {
+        case 'EACCES':
+            console.error(bind + ' requires elevated privileges');
+            process.exit(1);
+            break;
+        case 'EADDRINUSE':
+            console.error(bind + ' is already in use');
+            process.exit(1);
+            break;
+        default:
+            throw error;
+    }
 }
 
 /**
@@ -102,9 +104,9 @@ function onError(error) {
  */
 
 function onListening() {
-  var addr = server.address();
-  var bind = typeof addr === 'string'
-    ? 'pipe ' + addr
-    : 'port ' + addr.port;
-  console.log('Listening on ' + bind);
+    let address = server.address();
+    let bind = typeof address === 'string'
+        ? 'pipe ' + address
+        : 'port ' + address.port;
+    console.log('Listening on ' + bind);
 }

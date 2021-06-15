@@ -1,14 +1,14 @@
 import uuid from 'uuid-v4';
 import path from 'path';
 
-function uploadImage(req, folderid) {
+function uploadImage(req, folder_id) {
     return new Promise((resolve, reject) => {
-        var extname = path.extname(req.file.originalname);
+        let extname = path.extname(req.file.originalname);
 
-        var bucket = req.app.locals.bucket;
-        var fileUpload = bucket.file(`images/${folderid}/${uuid()}${extname}`);
+        let bucket = req.app.locals.bucket;
+        let fileUpload = bucket.file(`images/${folder_id}/${uuid()}${extname}`);
 
-        var blobStream = fileUpload.createWriteStream({
+        let blobStream = fileUpload.createWriteStream({
             metadata: {
                 contentType: req.file.mimetype
             }
@@ -27,8 +27,8 @@ function uploadImage(req, folderid) {
 }
 
 async function getImageDownloadUrl(req, loc) {
-    var bucket = req.app.locals.bucket;
-    var response = await bucket.file(loc).getSignedUrl({
+    let bucket = req.app.locals.bucket;
+    let response = await bucket.file(loc).getSignedUrl({
         version: 'v2',
         action: 'read',
         expires: new Date(Date.now() + 1000 * 60 * 60),
@@ -37,14 +37,14 @@ async function getImageDownloadUrl(req, loc) {
 }
 
 async function deleteImage(req, loc) {
-    var bucket = req.app.locals.bucket;
+    let bucket = req.app.locals.bucket;
     await bucket.file(loc).delete();
 }
 
-async function deleteFolder(req, folderid) {
-    var bucket = req.app.locals.bucket;
+async function deleteFolder(req, folder_id) {
+    let bucket = req.app.locals.bucket;
     await bucket.deleteFiles({
-        prefix: `images/${folderid}/`
+        prefix: `images/${folder_id}/`
     });
 }
 

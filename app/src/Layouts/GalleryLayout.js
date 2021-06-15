@@ -238,7 +238,9 @@ export default function GalleryLayout({className, children}) {
                         </div>
                     </div>
                 </header>
-                <div className={className}>{children}</div>
+                <>
+                    {children}
+                </>
             </div>
         </div>
     )

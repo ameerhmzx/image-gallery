@@ -13,8 +13,7 @@ const imageSchema = new mongoose.Schema(
             required: true
         },
     },
-    { collection: 'images', },
-    { timestamps: true }
+    {collection: 'images', timestamps: true},
 );
 
 

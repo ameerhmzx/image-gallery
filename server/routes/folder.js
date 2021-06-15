@@ -1,18 +1,19 @@
-import { Router } from "express";
+import {Router} from "express";
 
 import Folder from "../models/folder.js";
 import User from "../models/user.js";
 import Image from "../models/image.js";
 
-import { uploadImage, getImageDownloadUrl, deleteImage, deleteFolder } from './utils/storage.js';
-import { haveReadAccess, haveWriteAccess, isOwner, validatePartner } from "./utils/authorization.js";
+import {deleteFolder, deleteImage, getImageDownloadUrl, uploadImage} from './utils/storage.js';
+import {haveReadAccess, haveWriteAccess, isOwner, validatePartner} from "./utils/authorization.js";
 
 import authenticated from "./utils/authenticated.js";
 
 import Multer from 'multer';
 import path from 'path';
+import paginate from "express-paginate";
 
-var upload = Multer({
+const upload = Multer({
     storage: Multer.memoryStorage(),
     limits: {
         fileSize: 5 * 1024 * 1024
@@ -30,14 +31,14 @@ var upload = Multer({
     }
 });
 
-var router = Router();
+const router = Router();
 
 // Returns folders where owner = authenticated user
 router.get('/', authenticated, async (req, res, next) => {
     res.setHeader('Content-Type', 'application/json');
     try {
 
-        var folders = await Folder.find({ owner: req.user.id });
+        let folders = await Folder.find({owner: req.user.id});
         res.status(200).json({
             status: 'success',
             data: folders
@@ -52,13 +53,12 @@ router.get('/', authenticated, async (req, res, next) => {
 router.get('/shared', authenticated, async (req, res, next) => {
     res.setHeader('Content-Type', 'application/json');
     try {
-
-        var folders = await Folder.find({ "partners.user": req.user.id });
+        let folders = await Folder.find({"partners.user": req.user.id});
+        folders = folders.populate('owner');
         res.status(200).json({
             status: 'success',
             data: folders
         });
-
     } catch (err) {
         next(err);
     }
@@ -69,10 +69,10 @@ router.post('/', authenticated, async (req, res, next) => {
     res.setHeader('Content-Type', 'application/json');
     try {
 
-        if (req.body.name == undefined)
+        if (req.body.name === undefined || req.body.name.trim() === '')
             return res.sendStatus(400);
 
-        var folder = await Folder.create({ name: req.body.name, owner: req.user.id });
+        let folder = await Folder.create({name: req.body.name, owner: req.user.id});
         res.status(201).json({
             status: 'success',
             data: folder
@@ -84,17 +84,18 @@ router.post('/', authenticated, async (req, res, next) => {
 });
 
 // Update folder name
+// TODO: verify owner
 router.put('/:folder', authenticated, async (req, res, next) => {
     res.setHeader('Content-Type', 'application/json');
     try {
 
-        if (req.body.name == undefined)
+        if (req.body.name === undefined)
             return res.sendStatus(400);
 
-        var filter = { _id: req.params.folder };
-        await Folder.findOneAndUpdate(filter, { name: req.body.name });
+        let filter = {_id: req.params.folder};
+        await Folder.findOneAndUpdate(filter, {name: req.body.name});
 
-        var folder = await Folder.findOne(filter);
+        let folder = await Folder.findOne(filter);
         res.status(200).json({
             status: 'success',
             data: folder
@@ -110,11 +111,11 @@ router.delete('/:folder', authenticated, async (req, res, next) => {
     res.setHeader('Content-Type', 'application/json');
     try {
 
-        var folder = await Folder.findById(req.params.folder);
+        let folder = await Folder.findById(req.params.folder);
         if (!isOwner(folder, req.user.id))
             return res.sendStatus(403);
 
-        var deleted = await Folder.findByIdAndDelete(req.params.folder);
+        let deleted = await Folder.findByIdAndDelete(req.params.folder);
         await deleteFolder(req, req.params.folder);
         res.status(200).json({
             status: 'success',
@@ -131,12 +132,12 @@ router.get('/:folder/partners', authenticated, async (req, res, next) => {
     res.setHeader('Content-Type', 'application/json');
     try {
 
-        var folder = await Folder.findById(req.params.folder);
+        let folder = await Folder.findById(req.params.folder);
         if (!isOwner(folder, req.user.id))
             return res.sendStatus(403);
 
-        var folder = await folder.populate('partners.user');
-        var partners = folder.partners;
+        folder = await folder.populate('partners.user');
+        let partners = folder.partners;
 
         res.status(200).json({
             status: 'success',
@@ -152,30 +153,32 @@ router.get('/:folder/partners', authenticated, async (req, res, next) => {
 router.post('/:folder/partners', authenticated, async (req, res, next) => {
     res.setHeader('Content-Type', 'application/json');
     try {
+        let partner;
+
         if (!validatePartner(req.user.id, req.body.partner))
             return res.sendStatus(400);
 
-        var folder = await Folder.findById(req.params.folder);
+        let folder = await Folder.findById(req.params.folder);
         if (!isOwner(folder, req.user.id))
             return res.sendStatus(403);
 
-        var temp = await User.findOne({ email: req.body.partner });
-        var partnerid = temp._id;
+        let temp = await User.findOne({email: req.body.partner});
+        let partner_id = temp._id;
 
-        for (var partner of folder.partners) {
-            if (partner.user.toString() == partnerid) {
-                var err = {};
+        for (partner of folder.partners) {
+            if (partner.user.toString() === partner_id) {
+                let err = {};
                 err.status = 409;
                 return next(err);
             }
         }
 
-        var partner = { user: partnerid };
-        if (req.body.access != undefined && req.body.access == 1)
+        partner = {user: partner_id};
+        if (req.body.access !== undefined && req.body.access === 1)
             partner.access = 1;
 
         folder.partners.push(partner);
-        var data = await folder.save();
+        let data = await folder.save();
 
         return res.status(200).json({
             status: 'success',
@@ -194,17 +197,17 @@ router.put('/:folder/partners/:pid', authenticated, async (req, res, next) => {
         if (!validatePartner(req.user.id, req.params.pid))
             return res.sendStatus(400);
 
-        if (req.body.access == undefined || req.body.access > 1 || req.body.access < 0)
+        if (req.body.access === undefined || req.body.access > 1 || req.body.access < 0)
             return res.sendStatus(400);
 
-        var folder = await Folder.findById(req.params.folder);
+        let folder = await Folder.findById(req.params.folder);
         if (!isOwner(folder, req.user.id))
             return res.sendStatus(403);
 
-        for (var partner of folder.partners) {
-            if (partner.user == req.params.pid) {
+        for (let partner of folder.partners) {
+            if (partner.user === req.params.pid) {
                 partner.access = req.body.access;
-                var data = await folder.save();
+                let data = await folder.save();
                 return res.status(200).json({
                     status: 'success',
                     data: data
@@ -220,20 +223,22 @@ router.put('/:folder/partners/:pid', authenticated, async (req, res, next) => {
 });
 
 // Remove partner where userid = pid
+// TODO: enable partner self remove
 router.delete('/:folder/partners/:pid', authenticated, async (req, res, next) => {
     res.setHeader('Content-Type', 'application/json');
     try {
         if (!validatePartner(req.user.id, req.params.pid))
             return res.sendStatus(400);
 
-        var folder = await Folder.findById(req.params.folder);
+        let folder = await Folder.findById(req.params.folder);
         if (!isOwner(folder, req.user.id))
             return res.sendStatus(403);
 
-        var filtered = folder.partners.filter(function (partner) { return partner.user != req.params.pid });
-        folder.partners = filtered;
+        folder.partners = folder.partners.filter(function (partner) {
+            return partner.user !== req.params.pid
+        });
 
-        var data = await folder.save();
+        let data = await folder.save();
         res.status(200).json({
             status: 'success',
             data: data
@@ -248,13 +253,13 @@ router.delete('/:folder/partners/:pid', authenticated, async (req, res, next) =>
 router.delete('/:folder/partners', authenticated, async (req, res, next) => {
     res.setHeader('Content-Type', 'application/json');
     try {
-        var folder = await Folder.findById(req.params.folder);
+        let folder = await Folder.findById(req.params.folder);
         if (!isOwner(folder, req.user.id))
             return res.sendStatus(403);
 
         folder.partners = [];
 
-        var data = await folder.save();
+        let data = await folder.save();
         res.status(200).json({
             status: 'success',
             data: data
@@ -265,21 +270,36 @@ router.delete('/:folder/partners', authenticated, async (req, res, next) => {
     }
 });
 
-// Get image 
+// Get image
 router.get('/:folder/images', authenticated, async (req, res, next) => {
     res.setHeader('Content-Type', 'application/json');
     try {
-        var folder = await Folder.findById(req.params.folder);
+        let folder = await Folder.findById(req.params.folder);
         if (!haveReadAccess(folder, req.user.id))
             return res.sendStatus(403);
 
-        var images = await Image.findMany({ folder: folder._id }).sort({ createdAt: 'desc' });
+        const [ images, imageCount ] = await Promise.all([
+            Image.find({folder: folder._id}).sort({createdAt: 'desc'}).limit(req.query.limit).skip(req.skip).lean().exec(),
+            Image.countDocuments({folder: folder._id})
+        ]);
 
-        images.map(async (image) => image.path = await getImageDownloadUrl(req, image.path));
+        const pageCount = Math.ceil(imageCount / req.query.limit);
+        let validImages = [];
+        for(let image of images){
+            validImages.push({
+               id: image._id,
+               folder: image.folder.toString(),
+               path: await getImageDownloadUrl(req, image.path),
+               createdAt: image.createdAt
+            });
+        }
 
         return res.status(200).json({
             status: 'success',
-            data: images
+            has_more: paginate.hasNextPages(req)(pageCount),
+            imageCount: imageCount,
+            pageCount: pageCount,
+            data: validImages
         });
     } catch (err) {
         next(err);
@@ -291,13 +311,13 @@ router.post('/:folder/images', authenticated, upload.single('image'), async (req
     res.setHeader('Content-Type', 'application/json');
     if (req.file) {
         try {
-            var folder = await Folder.findById(req.params.folder);
+            let folder = await Folder.findById(req.params.folder);
             if (!haveWriteAccess(folder, req.user.id))
                 return res.sendStatus(403);
 
-            var loc = await uploadImage(req, req.params.folder);
+            let loc = await uploadImage(req, req.params.folder);
 
-            var image = await Image.create({
+            let image = await Image.create({
                 folder: folder._id,
                 path: loc,
             });
@@ -319,11 +339,11 @@ router.post('/:folder/images', authenticated, upload.single('image'), async (req
 router.delete('/:folder/images/:iid', authenticated, async (req, res, next) => {
     res.setHeader('Content-Type', 'application/json');
     try {
-        var folder = await Folder.findById(req.params.folder);
+        let folder = await Folder.findById(req.params.folder);
         if (!haveWriteAccess(folder, req.user.id))
             return res.sendStatus(403);
 
-        var image = await Image.findOneAndDelete({ _id: req.params.iid, folder: req.params.folder });
+        let image = await Image.findOneAndDelete({_id: req.params.iid, folder: req.params.folder});
         await deleteImage(req, image.path);
 
         return res.sendStatus(200);
