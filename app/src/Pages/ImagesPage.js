@@ -1,8 +1,11 @@
 import {useParams} from 'react-router-dom';
 import {useCallback, useContext, useEffect, useState} from "react";
+
 import LoadingContext from "../Context/LoadingContext";
 import ToastContext from "../Context/ToastContext";
 import GalleryLayout from "../Components/Gallery";
+import Server from "../utils/Server"
+
 import {Transition} from "@headlessui/react";
 import {PlusIcon} from "@heroicons/react/solid";
 import AddImageDialog from "../Components/AddImageDialog";
@@ -24,16 +27,19 @@ function reduce(numerator, denominator) {
     return {width: numerator / gcd, height: denominator / gcd};
 }
 
-async function mapPhotos(images) {
+async function mapToPhoto(image) {
+    let {width, height} = await getImageSize(image['path']);
+    return {
+        src: image['path'],
+        width,
+        height
+    };
+}
+
+async function mapToPhotos(images) {
     let photos = [];
-    for (let image of images) {
-        let {width, height} = await getImageSize(image['path']);
-        photos.push({
-            src: image['path'],
-            width,
-            height
-        });
-    }
+    for (let image of images)
+        photos.push(await mapToPhoto(image));
     return photos;
 }
 
@@ -48,17 +54,12 @@ export default function ImagesPage() {
 
     const loadImages = useCallback(() => {
         setLoading(true);
-        fetch(`${process.env.REACT_APP_SERVER_URL}/folder/${folderId}/images/`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${sessionStorage.getItem('jwtToken')}`
-            }
-        }).then(async response => {
-            if (response.ok) {
-                let res = await response.json();
+
+        Server.get(`/folder/${folderId}/images/`).then(async response => {
+            if (response.statusText === 'OK') {
+                let res = response.data;
                 if (res['status'] === 'success') {
-                    setPhotos(await mapPhotos(res['data']));
+                    setPhotos(await mapToPhotos(res['data']));
                 } else {
                     showToast({
                         title: 'Failed',
@@ -75,23 +76,55 @@ export default function ImagesPage() {
         }).finally(() => {
             setLoading(false);
         });
+
     }, [setLoading, showToast, folderId]);
 
     useEffect(() => loadImages(), [loadImages]);
 
-    useEffect(() => {
-        console.log(photos);
-    }, [photos]);
-
-
     function uploadImage(image, onComplete, onError) {
-        // TODO: upload image & loadImages()
-        setTimeout(onComplete, 1000);
+        setLoading(true);
+        let formData = new FormData();
+        formData.append('image', image);
+        Server.post(`${process.env.REACT_APP_SERVER_URL}/folder/${folderId}/images/`, formData)
+            .then(async response => {
+                if (response.statusText === 'OK') {
+                    let res = response.data;
+                    if (res['status'] === 'success') {
+                        let newState = photos.slice();
+                        newState.unshift(await mapToPhoto(res['data']));
+                        setPhotos(newState);
+                        onComplete();
+                        showToast({
+                            title: 'Success',
+                            text: 'Image Uploaded!',
+                            type: 'success'
+                        });
+                    } else {
+                        showToast({
+                            title: 'Failed',
+                            text: 'Unable to upload Image',
+                            type: 'fail'
+                        });
+                        onError();
+                    }
+                } else {
+                    showToast({
+                        title: 'Failed',
+                        text: 'Unable to upload Image',
+                        type: 'fail'
+                    });
+                    onError();
+                }
+            }).finally(() => {
+            setLoading(false);
+        });
     }
 
     return (
-        <AddImageDialog mainAction={uploadImage} show={addImageDialogShow}
-                        closeDialog={() => setAddImageDialogShow(false)}>
+        <AddImageDialog
+            mainAction={uploadImage}
+            show={addImageDialogShow}
+            closeDialog={() => setAddImageDialogShow(false)}>
             <div className={`w-full h-full bg-indigo-50 overflow-y-auto p-2`}>
                 <div className={`container mx-auto`}>
                     <GalleryLayout photos={photos}/>
