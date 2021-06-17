@@ -2,6 +2,8 @@ import {Dialog, Transition} from "@headlessui/react";
 import {Fragment, useEffect, useState} from "react";
 import {FolderAddIcon} from "@heroicons/react/solid";
 
+import PropTypes from "prop-types";
+
 export default function AddFolderDialog(props) {
 
     let [folderName, setFolderName] = useState('');
@@ -111,3 +113,10 @@ export default function AddFolderDialog(props) {
         </Transition>
     </div>);
 }
+
+AddFolderDialog.propTypes = {
+    mainAction: PropTypes.func.isRequired,
+    show: PropTypes.bool.isRequired,
+    closeDialog: PropTypes.func.isRequired,
+    children: PropTypes.element
+};

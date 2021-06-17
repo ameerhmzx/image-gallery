@@ -5,7 +5,7 @@ import AuthContext from "./Context/AuthContext";
 import LoadingContext from "./Context/LoadingContext";
 import ToastContext from "./Context/ToastContext";
 
-import GalleryLayout from './Layouts/GalleryLayout';
+import DashboardLayout from './Layouts/DashboardLayout';
 import AuthPage from './Pages/AuthPage';
 import SharedPage from './Pages/SharedPage';
 import LoadingBar from "./Components/LoadingBar";
@@ -46,7 +46,7 @@ export default function App() {
                                     <AuthPage/>
                                 </Route>
                                 {authState &&
-                                <GalleryLayout>
+                                <DashboardLayout>
                                     <Switch>
                                         <Route path="/profile">
                                             <ProfilePage/>
@@ -67,7 +67,7 @@ export default function App() {
                                             404
                                         </Route>
                                     </Switch>
-                                </GalleryLayout>
+                                </DashboardLayout>
                                 }
                                 <Route path="*">
                                     {authState ? <Redirect to='/photos'/> : <Redirect to='/login'/>}

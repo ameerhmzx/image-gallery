@@ -45,7 +45,7 @@ function getSelectedNavigation(location) {
     return result;
 }
 
-export default function GalleryLayout({className, children}) {
+export default function DashboardLayout({children}) {
 
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
     const {changeAuthState} = useContext(AuthContext);

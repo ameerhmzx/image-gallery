@@ -1,15 +1,52 @@
 import {useParams} from 'react-router-dom';
-import {useCallback, useContext, useEffect} from "react";
+import {useCallback, useContext, useEffect, useState} from "react";
 import LoadingContext from "../Context/LoadingContext";
 import ToastContext from "../Context/ToastContext";
+import GalleryLayout from "../Components/Gallery";
+import {Transition} from "@headlessui/react";
+import {PlusIcon} from "@heroicons/react/solid";
+import AddImageDialog from "../Components/AddImageDialog";
+
+function getImageSize(url) {
+    return new Promise((resolve, reject) => {
+        let img = new Image();
+        img.onload = () => resolve(reduce(img.width, img.height));
+        img.onerror = () => reject();
+        img.src = url;
+    });
+}
+
+function reduce(numerator, denominator) {
+    let gcd = function gcd(a, b) {
+        return b ? gcd(b, a % b) : a;
+    };
+    gcd = gcd(numerator, denominator);
+    return {width: numerator / gcd, height: denominator / gcd};
+}
+
+async function mapPhotos(images) {
+    let photos = [];
+    for (let image of images) {
+        let {width, height} = await getImageSize(image['path']);
+        photos.push({
+            src: image['path'],
+            width,
+            height
+        });
+    }
+    return photos;
+}
 
 export default function ImagesPage() {
     let {folderId} = useParams();
     let {setLoading} = useContext(LoadingContext);
     let {showToast} = useContext(ToastContext);
+    let [photos, setPhotos] = useState([]);
+    let [addImageDialogShow, setAddImageDialogShow] = useState(false);
+
+    // TODO: paginate
 
     const loadImages = useCallback(() => {
-        // TODO: update code
         setLoading(true);
         fetch(`${process.env.REACT_APP_SERVER_URL}/folder/${folderId}/images/`, {
             method: 'GET',
@@ -21,7 +58,7 @@ export default function ImagesPage() {
             if (response.ok) {
                 let res = await response.json();
                 if (res['status'] === 'success') {
-                    console.log(res);
+                    setPhotos(await mapPhotos(res['data']));
                 } else {
                     showToast({
                         title: 'Failed',
@@ -38,44 +75,47 @@ export default function ImagesPage() {
         }).finally(() => {
             setLoading(false);
         });
-    }, [setLoading, showToast]);
+    }, [setLoading, showToast, folderId]);
 
-    // useEffect(() => loadImages(), [loadImages]);
+    useEffect(() => loadImages(), [loadImages]);
 
-    let images = [
-        'https://images.ctfassets.net/hrltx12pl8hq/3KWcqxPlvmgkpMS5VdjLAk/3cbdd812faf4b8c343b259656d31a0ee/rendered_15.jpg?fit=fill&w=480&h=270',
-        'https://images.unsplash.com/photo-1606787620651-3f8e15e00662?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=634&q=80',
-        'https://images.unsplash.com/photo-1623686252990-5c3f81b95956?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=1050&q=80',
-        'https://images.unsplash.com/photo-1623646234568-8919b5796bc9?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=634&q=80',
-        'https://images.ctfassets.net/hrltx12pl8hq/3KWcqxPlvmgkpMS5VdjLAk/3cbdd812faf4b8c343b259656d31a0ee/rendered_15.jpg?fit=fill&w=480&h=270',
-        'https://images.ctfassets.net/hrltx12pl8hq/3KWcqxPlvmgkpMS5VdjLAk/3cbdd812faf4b8c343b259656d31a0ee/rendered_15.jpg?fit=fill&w=480&h=270',
-        'https://images.unsplash.com/photo-1606787620651-3f8e15e00662?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=634&q=80',
-        'https://images.unsplash.com/photo-1606787620651-3f8e15e00662?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=634&q=80',
-        'https://images.unsplash.com/photo-1623686252990-5c3f81b95956?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=1050&q=80',
-        'https://images.unsplash.com/photo-1623646234568-8919b5796bc9?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=634&q=80',
-        'https://images.ctfassets.net/hrltx12pl8hq/3KWcqxPlvmgkpMS5VdjLAk/3cbdd812faf4b8c343b259656d31a0ee/rendered_15.jpg?fit=fill&w=480&h=270',
-        'https://images.unsplash.com/photo-1606787620651-3f8e15e00662?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=634&q=80',
-        'https://images.unsplash.com/photo-1623686252990-5c3f81b95956?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=1050&q=80',
-        'https://images.unsplash.com/photo-1606787620651-3f8e15e00662?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=634&q=80',
-        'https://images.unsplash.com/photo-1623686252990-5c3f81b95956?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=1050&q=80',
-        'https://images.unsplash.com/photo-1623686252990-5c3f81b95956?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=1050&q=80',
-        'https://images.unsplash.com/photo-1623646234568-8919b5796bc9?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=634&q=80',
-        'https://images.ctfassets.net/hrltx12pl8hq/3KWcqxPlvmgkpMS5VdjLAk/3cbdd812faf4b8c343b259656d31a0ee/rendered_15.jpg?fit=fill&w=480&h=270',
-        'https://images.unsplash.com/photo-1606787620651-3f8e15e00662?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=634&q=80',
-        'https://images.unsplash.com/photo-1623686252990-5c3f81b95956?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=1050&q=80',
-        'https://images.unsplash.com/photo-1623646234568-8919b5796bc9?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=634&q=80',
-    ];
+    useEffect(() => {
+        console.log(photos);
+    }, [photos]);
+
+
+    function uploadImage(image, onComplete, onError) {
+        // TODO: upload image & loadImages()
+        setTimeout(onComplete, 1000);
+    }
 
     return (
-        <div className={`w-full h-full bg-indigo-50 overflow-y-auto p-2`}>
-            <div className={`container mx-auto flex flex-wrap`}>
-            {
-                images.map((image, i) =>
-                    <div className={`flex-grow`} key={i}>
-                        <img className={`h-64 min-w-sm w-full object-cover rounded-md`} src={image} alt={`none`}/>
-                    </div>)
-            }
+        <AddImageDialog mainAction={uploadImage} show={addImageDialogShow}
+                        closeDialog={() => setAddImageDialogShow(false)}>
+            <div className={`w-full h-full bg-indigo-50 overflow-y-auto p-2`}>
+                <div className={`container mx-auto`}>
+                    <GalleryLayout photos={photos}/>
+                </div>
+                {/*FAB*/}
+                <Transition
+                    appear
+                    className={'fixed bottom-0 right-0'}
+                    show={!addImageDialogShow}
+                    enter="transition duration-500 ease-out"
+                    enterFrom="transform scale-75 opacity-0"
+                    enterTo="transform scale-100 opacity-100"
+                    leave="transition duration-300 ease-out"
+                    leaveFrom="transform scale-100 opacity-100"
+                    leaveTo="transform scale-75 opacity-0"
+                >
+                    <div
+                        onClick={() => setAddImageDialogShow(true)}
+                        className='mr-4 mb-6 md:mr-12 md:mb-8 bg-indigo-500 p-3 rounded-full shadow-sm
+                        hover:shadow-md duration-300 cursor-pointer z-20 hover:bg-indigo-700'>
+                        <PlusIcon className={'w-6 text-white'}/>
+                    </div>
+                </Transition>
             </div>
-        </div>
+        </AddImageDialog>
     );
 }

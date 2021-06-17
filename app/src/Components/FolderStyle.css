@@ -1,7 +1,0 @@
-.menu {
-    --tw-bg-opacity: 0;
-}
-
-.folder:hover .menu {
-    --tw-bg-opacity: 0.6;
-}

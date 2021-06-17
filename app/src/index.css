@@ -28,6 +28,15 @@ code {
     min-width: 8rem;
 }
 
+.menu {
+    --tw-bg-opacity: 0;
+}
+
+.folder:hover .menu {
+    --tw-bg-opacity: 0.6;
+}
+
+
 @keyframes increase {
     from {
         left: -5%;
