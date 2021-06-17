@@ -12,6 +12,7 @@ import authenticated from "./utils/authenticated.js";
 import Multer from 'multer';
 import path from 'path';
 import paginate from "express-paginate";
+import sharp from "sharp";
 
 const upload = Multer({
     storage: Multer.memoryStorage(),
@@ -278,19 +279,24 @@ router.get('/:folder/images', authenticated, async (req, res, next) => {
         if (!haveReadAccess(folder, req.user.id))
             return res.sendStatus(403);
 
-        const [ images, imageCount ] = await Promise.all([
-            Image.find({folder: folder._id}).sort({createdAt: 'desc'}).limit(req.query.limit).skip(req.skip).lean().exec(),
+        const [images, imageCount] = await Promise.all([
+            Image.find({folder: folder._id})
+                .sort({createdAt: 'desc'})
+                .limit(req.query.limit)
+                .skip(req.skip)
+                .lean()
+                .exec(),
             Image.countDocuments({folder: folder._id})
         ]);
 
         const pageCount = Math.ceil(imageCount / req.query.limit);
         let validImages = [];
-        for(let image of images){
+        for (let image of images) {
             validImages.push({
-               id: image._id,
-               folder: image.folder.toString(),
-               path: await getImageDownloadUrl(req, image.path),
-               createdAt: image.createdAt
+                id: image._id,
+                folder: image.folder.toString(),
+                path: await getImageDownloadUrl(req, image.path),
+                createdAt: image.createdAt
             });
         }
 
@@ -315,7 +321,13 @@ router.post('/:folder/images', authenticated, upload.single('image'), async (req
             if (!haveWriteAccess(folder, req.user.id))
                 return res.sendStatus(403);
 
-            let loc = await uploadImage(req, req.params.folder);
+            // Resize to max 800 width or 800 height
+            let image_buffer = await sharp(req.file.buffer).resize(800, 800, {
+                withoutEnlargement: true,
+                fit: sharp.fit.outside
+            }).toBuffer();
+
+            let loc = await uploadImage(req, req.params.folder, image_buffer);
 
             let image = await Image.create({
                 folder: folder._id,
@@ -329,7 +341,7 @@ router.post('/:folder/images', authenticated, upload.single('image'), async (req
                 data: image
             });
         } catch (err) {
-            next(err);
+            return next(err);
         }
     }
     return res.sendStatus(500);

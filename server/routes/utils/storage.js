@@ -1,7 +1,7 @@
 import uuid from 'uuid-v4';
 import path from 'path';
 
-function uploadImage(req, folder_id) {
+function uploadImage(req, folder_id, image_Buffer) {
     return new Promise((resolve, reject) => {
         let extname = path.extname(req.file.originalname);
 
@@ -22,7 +22,7 @@ function uploadImage(req, folder_id) {
             resolve(`${fileUpload.name}`);
         });
 
-        blobStream.end(req.file.buffer);
+        blobStream.end(image_Buffer);
     });
 }
 
