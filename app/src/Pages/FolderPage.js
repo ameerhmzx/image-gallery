@@ -6,6 +6,7 @@ import {Transition} from "@headlessui/react";
 import AddFolderDialog from "../Components/AddFolderDialog";
 import LoadingContext from "../Context/LoadingContext";
 import ToastContext from "../Context/ToastContext";
+import Server from "../utils/Server";
 
 export default function FolderPage() {
     let [folderDialogShow, setFolderDialogShow] = useState(false);
@@ -15,73 +16,47 @@ export default function FolderPage() {
 
     const loadFolders = useCallback(() => {
         setLoading(true);
-        fetch(`${process.env.REACT_APP_SERVER_URL}/folder/`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${sessionStorage.getItem('jwtToken')}`
-            }
-        }).then(async response => {
-            if (response.ok) {
-                let res = await response.json();
-                if (res['status'] === 'success') {
-                    setFolders(res['data']);
-                } else {
-                    showToast({
-                        title: 'Failed',
-                        text: 'Unable to load folders',
-                        type: 'fail'
-                    });
-                }
-            } else
+        Server.get(`/folder/`)
+            .then(response => {
+                if (response.statusText === 'OK')
+                    setFolders(response.data['data']);
+            })
+            .catch(err => {
                 showToast({
                     title: 'Failed',
                     text: 'Unable to load folders',
                     type: 'fail'
                 });
-        }).finally(() => {
-            setLoading(false);
-        });
+            })
+            .finally(() => {
+                setLoading(false);
+            });
     }, [setLoading, showToast]);
 
-    useEffect(() => loadFolders(), [loadFolders]);
+    useEffect(() => {
+        loadFolders();
+    }, [loadFolders]);
 
     function createFolder(name) {
         setFolderDialogShow(false);
         setLoading(true);
-        fetch(`${process.env.REACT_APP_SERVER_URL}/folder/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${sessionStorage.getItem('jwtToken')}`
-            },
-            body: JSON.stringify({
-                'name': name
-            })
+        Server.post(`/folder/`, {
+            'name': name
         })
-            .then(async response => {
-                if (response.ok) {
-                    let res = await response.json();
-                    if (res['status'] === 'success') {
-                        showToast({
-                            title: 'Success',
-                            text: `New Folder named '${res['data']['name']}' created successfully!`,
-                            type: 'success'
-                        });
-                        loadFolders();
-                    } else {
-                        showToast({
-                            title: 'Failed',
-                            text: 'Folder name not defined!',
-                            type: 'fail'
-                        });
-                    }
-                } else if (response.status === 400)
-                    showToast({
-                        title: 'Failed',
-                        text: 'Folder name not defined!',
-                        type: 'fail'
-                    });
+            .then(response => {
+                showToast({
+                    title: 'Success',
+                    text: `New Folder named '${response.data['data']['name']}' created successfully!`,
+                    type: 'success'
+                });
+                loadFolders();
+            })
+            .catch(err => {
+                showToast({
+                    title: 'Failed',
+                    text: 'Folder name not defined!',
+                    type: 'fail'
+                });
             })
             .finally(() => {
                 setLoading(false);

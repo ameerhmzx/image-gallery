@@ -3,6 +3,7 @@ import LoadingContext from "../Context/LoadingContext";
 import {UserIcon, AtSymbolIcon} from "@heroicons/react/solid";
 import {PencilIcon} from "@heroicons/react/outline";
 import ToastContext from "../Context/ToastContext";
+import Server from "../utils/Server";
 
 
 function classNames(...classes) {
@@ -15,7 +16,12 @@ function isValidEmail(email) {
 
 export default function ProfilePage() {
 
-    let [profile, setProfile] = useState({});
+    let [profile, setProfile] = useState({
+        name: '',
+        email: '',
+        err_name: undefined,
+        err_email: undefined
+    });
     let {setLoading} = useContext(LoadingContext);
     let {showToast} = useContext(ToastContext);
     let [isUpdated, setUpdated] = useState(false);
@@ -46,19 +52,12 @@ export default function ProfilePage() {
         e.preventDefault();
         if (isUpdated && profile.name && profile.name.length > 0 && profile.email && isValidEmail(profile.email)) {
             setLoading(true);
-            fetch(`${process.env.REACT_APP_SERVER_URL}/user/`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${sessionStorage.getItem('jwtToken')}`
-                },
-                body: JSON.stringify({
-                    'email': profile.email,
-                    'name': profile.name
-                })
+            Server.put(`/user/`, {
+                'email': profile.email,
+                'name': profile.name
             })
-                .then((res) => res.json())
-                .then((res) => {
+                .then((response) => {
+                    let res = response.data;
                     if (res['status'] === 'success') {
                         showToast({
                             title: 'Success',
@@ -76,21 +75,15 @@ export default function ProfilePage() {
                 setLoading(false);
             });
         }
+
         return true;
     }
 
     useEffect(() => {
         if (profile.uid === undefined) {
             setLoading(true);
-            fetch(`${process.env.REACT_APP_SERVER_URL}/user`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${sessionStorage.getItem('jwtToken')}`
-                }
-            })
-                .then((res) => res.json())
-                .then(setProfile)
+            Server.get(`/user`)
+                .then((res) => setProfile(res.data))
                 .finally(() => {
                     setLoading(false);
                 });

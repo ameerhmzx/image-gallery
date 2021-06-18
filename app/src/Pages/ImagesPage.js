@@ -9,6 +9,7 @@ import Server from "../utils/Server"
 import {Transition} from "@headlessui/react";
 import {PlusIcon} from "@heroicons/react/solid";
 import AddImageDialog from "../Components/AddImageDialog";
+import axios from "axios";
 
 function getImageSize(url) {
     return new Promise((resolve, reject) => {
@@ -54,38 +55,40 @@ export default function ImagesPage() {
 
     const loadImages = useCallback(() => {
         setLoading(true);
-
-        Server.get(`/folder/${folderId}/images/`).then(async response => {
-            if (response.statusText === 'OK') {
-                let res = response.data;
-                if (res['status'] === 'success') {
-                    setPhotos(await mapToPhotos(res['data']));
-                } else {
+        Server.get(`/folder/${folderId}/images/`)
+            .then(async response => {
+                if (response.statusText === 'OK') {
+                    let res = response.data;
+                    if (res['status'] === 'success') {
+                        setPhotos(await mapToPhotos(res['data']));
+                    } else {
+                        showToast({
+                            title: 'Failed',
+                            text: 'Unable to load Images',
+                            type: 'fail'
+                        });
+                    }
+                } else
                     showToast({
                         title: 'Failed',
                         text: 'Unable to load Images',
                         type: 'fail'
                     });
-                }
-            } else
-                showToast({
-                    title: 'Failed',
-                    text: 'Unable to load Images',
-                    type: 'fail'
-                });
-        }).finally(() => {
+            }).finally(() => {
             setLoading(false);
         });
 
     }, [setLoading, showToast, folderId]);
 
-    useEffect(() => loadImages(), [loadImages]);
+    useEffect(() => {
+        loadImages();
+    }, [loadImages]);
 
     function uploadImage(image, onComplete, onError) {
         setLoading(true);
         let formData = new FormData();
         formData.append('image', image);
-        Server.post(`${process.env.REACT_APP_SERVER_URL}/folder/${folderId}/images/`, formData)
+        Server.post(`/folder/${folderId}/images/`, formData)
             .then(async response => {
                 if (response.statusText === 'OK') {
                     let res = response.data;

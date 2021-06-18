@@ -1,10 +1,12 @@
-import AuthContext from "../Context/AuthContext";
-import LoadingContext from "../Context/LoadingContext";
 import {Switch, Route, Link} from "react-router-dom";
 import {useContext, useState} from "react";
 import {AtSymbolIcon, LockClosedIcon, LockOpenIcon, UserIcon} from "@heroicons/react/solid";
 import {LoginIcon, UserAddIcon} from "@heroicons/react/outline";
+
+import AuthContext from "../Context/AuthContext";
+import LoadingContext from "../Context/LoadingContext";
 import ToastContext from "../Context/ToastContext";
+import Server from "../utils/Server";
 
 function classNames(...classes) {
     return classes.filter(Boolean).join(' ')
@@ -31,23 +33,20 @@ export default function AuthPage() {
         event.preventDefault();
         if (validateAllFields(false)) {
             setLoading(true);
-            fetch(`${process.env.REACT_APP_SERVER_URL}/user/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    email: formState.email,
-                    password: formState.pass
-                })
+            Server.post(`/user/login`, {
+                email: formState.email,
+                password: formState.pass
             })
-                .then((res) => res.json())
-                .then((response) => {
-                    setLoading(false);
+                .then((res) => {
+                    let response = res.data;
                     if (response['status'] === 'success' && response['token'] !== undefined) {
                         sessionStorage.setItem('jwtToken', response['token']);
                         changeAuthState(true);
-                    } else if (response['status'] === 'fail' || response['status'] === 'error') {
+                    }
+                })
+                .catch(err => {
+                    let response = err.response.data;
+                    if (response['status'] === 'fail' || response['status'] === 'error') {
                         if (response['code'] === 'err-wrong-pass')
                             showToast({title: 'Unable to Login', text: 'Wrong credentials', type: 'fail'});
                         else
@@ -59,7 +58,8 @@ export default function AuthPage() {
                     } else {
                         showToast({title: 'Unable to Login', text: 'Unexpected error occurred!', type: 'fail'});
                     }
-                });
+                })
+                .finally(() => setLoading(false));
             return true;
         }
         return false;
@@ -69,23 +69,21 @@ export default function AuthPage() {
         event.preventDefault();
         if (validateAllFields(true)) {
             setLoading(true);
-            fetch(`${process.env.REACT_APP_SERVER_URL}/user/register`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    name: formState.name,
-                    email: formState.email,
-                    password: formState.pass
-                })
-            }).then((res) => res.json())
-                .then((response) => {
-                    setLoading(false);
+            Server.post(`/user/register`, {
+                name: formState.name,
+                email: formState.email,
+                password: formState.pass
+            })
+                .then((res) => {
+                    let response = res.data;
                     if (response['status'] === 'success' && response['token'] !== undefined) {
                         sessionStorage.setItem('jwtToken', response['token']);
                         changeAuthState(true);
-                    } else if (response['status'] === 'fail' || response['status'] === 'error') {
+                    }
+                })
+                .catch((err) => {
+                    let response = err.response.data;
+                    if (response['status'] === 'fail' || response['status'] === 'error') {
                         showToast({
                             title: 'Unable to register',
                             text: 'Either user already existed or some unknown error occurred!',
@@ -94,7 +92,8 @@ export default function AuthPage() {
                     } else {
                         showToast({title: 'Unable to register', text: 'Unexpected error occurred!', type: 'fail'});
                     }
-                });
+                })
+                .finally(() => setLoading(false));
             return true;
         }
         return false;

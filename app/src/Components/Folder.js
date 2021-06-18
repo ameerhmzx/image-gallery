@@ -8,6 +8,7 @@ import {useContext, useEffect, useState} from "react";
 import AlertDialogContext from "../Context/AlertDialogContext";
 import LoadingContext from "../Context/LoadingContext";
 import ToastContext from "../Context/ToastContext";
+import Server from "../utils/Server";
 
 function formatDate(date) {
     let d = new Date(date);
@@ -26,39 +27,27 @@ export default function Folder({folder, loadFolders}) {
 
     const deleteFolder = function () {
         setLoading(true);
-        fetch(`${process.env.REACT_APP_SERVER_URL}/folder/${folder._id}`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${sessionStorage.getItem('jwtToken')}`
-            }
-        }).then(async response => {
-            if (response.ok) {
-                let res = await response.json();
-                if (res['status'] === 'success') {
-                    showToast({
-                        title: 'Success',
-                        text: `Folder named '${res['data']['name']}' deleted successfully!`,
-                        type: 'success'
-                    });
-                    setShowing(false);
-                } else {
-                    showToast({
-                        title: 'Failed',
-                        text: 'Unable to delete folder',
-                        type: 'fail'
-                    });
-                }
-            } else
+        Server
+            .delete(`/folder/${folder._id}`)
+            .then(res => {
+                showToast({
+                    title: 'Success',
+                    text: `Folder named '${res.data['data']['name']}' deleted successfully!`,
+                    type: 'success'
+                });
+                setShowing(false);
+                setTimeout(() => {
+                    loadFolders();
+                }, 200);
+            })
+            .catch(err => {
                 showToast({
                     title: 'Failed',
                     text: 'Unable to delete folder',
                     type: 'fail'
                 });
-            setTimeout(() => {
-                loadFolders();
-            }, 200);
-        }).finally(() => setLoading(false));
+            })
+            .finally(() => setLoading(false));
     }
 
     const onDeleteClick = function () {
