@@ -9,7 +9,7 @@ import Server from "../utils/Server"
 import {Transition} from "@headlessui/react";
 import {PlusIcon} from "@heroicons/react/solid";
 import AddImageDialog from "../Components/AddImageDialog";
-import axios from "axios";
+import {IsMounted} from "../utils/IsMounted";
 
 function getImageSize(url) {
     return new Promise((resolve, reject) => {
@@ -50,6 +50,7 @@ export default function ImagesPage() {
     let {showToast} = useContext(ToastContext);
     let [photos, setPhotos] = useState([]);
     let [addImageDialogShow, setAddImageDialogShow] = useState(false);
+    let isMounted = IsMounted();
 
     // TODO: paginate
 
@@ -59,8 +60,9 @@ export default function ImagesPage() {
             .then(async response => {
                 if (response.statusText === 'OK') {
                     let res = response.data;
-                    if (res['status'] === 'success') {
-                        setPhotos(await mapToPhotos(res['data']));
+                    if (res['status'] === 'success' && isMounted()) {
+                        let photos = await mapToPhotos(res['data']);
+                        isMounted() && setPhotos(photos);
                     } else {
                         showToast({
                             title: 'Failed',
@@ -78,7 +80,7 @@ export default function ImagesPage() {
             setLoading(false);
         });
 
-    }, [setLoading, showToast, folderId]);
+    }, [setLoading, showToast, folderId, isMounted]);
 
     useEffect(() => {
         loadImages();
@@ -92,7 +94,7 @@ export default function ImagesPage() {
             .then(async response => {
                 if (response.statusText === 'OK') {
                     let res = response.data;
-                    if (res['status'] === 'success') {
+                    if (res['status'] === 'success' && isMounted()) {
                         let newState = photos.slice();
                         newState.unshift(await mapToPhoto(res['data']));
                         setPhotos(newState);

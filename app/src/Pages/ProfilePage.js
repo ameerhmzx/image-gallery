@@ -4,6 +4,7 @@ import {UserIcon, AtSymbolIcon} from "@heroicons/react/solid";
 import {PencilIcon} from "@heroicons/react/outline";
 import ToastContext from "../Context/ToastContext";
 import Server from "../utils/Server";
+import {IsMounted} from "../utils/IsMounted";
 
 
 function classNames(...classes) {
@@ -25,27 +26,28 @@ export default function ProfilePage() {
     let {setLoading} = useContext(LoadingContext);
     let {showToast} = useContext(ToastContext);
     let [isUpdated, setUpdated] = useState(false);
+    let isMounted = IsMounted();
 
     const handleNameChange = function (e) {
         let newState = {...profile};
         newState.name = e.target.value;
-        setUpdated(true);
+        isMounted() && setUpdated(true);
         if (newState.name === '')
             newState.err_name = 'Name Cannot be empty!';
         else
             newState.err_name = undefined;
-        setProfile(newState);
+        isMounted() && setProfile(newState);
     };
 
     const handleEmailChange = function (e) {
         let newState = {...profile};
         newState.email = e.target.value;
-        setUpdated(true);
+        isMounted() && setUpdated(true);
         if (newState.email === '' || !isValidEmail(newState.email))
             newState.err_email = 'Email must be valid!';
         else
             newState.err_email = undefined;
-        setProfile(newState);
+        isMounted() && setProfile(newState);
     };
 
     const handleProfileForm = function (e) {
@@ -64,7 +66,7 @@ export default function ProfilePage() {
                             text: 'Profile Updated Successfully',
                             type: 'success'
                         });
-                        setUpdated(false);
+                        isMounted() && setUpdated(false);
                     } else
                         showToast({
                             title: 'Failed',
@@ -83,12 +85,12 @@ export default function ProfilePage() {
         if (profile.uid === undefined) {
             setLoading(true);
             Server.get(`/user`)
-                .then((res) => setProfile(res.data))
+                .then((res) => isMounted && setProfile(res.data))
                 .finally(() => {
                     setLoading(false);
                 });
         }
-    }, [setLoading, profile.uid]);
+    }, [setLoading, profile.uid, isMounted]);
 
     return (
         <div className="w-full h-full flex items-center justify-center bg-indigo-50">

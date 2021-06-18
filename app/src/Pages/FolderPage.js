@@ -7,18 +7,20 @@ import AddFolderDialog from "../Components/AddFolderDialog";
 import LoadingContext from "../Context/LoadingContext";
 import ToastContext from "../Context/ToastContext";
 import Server from "../utils/Server";
+import {IsMounted} from "../utils/IsMounted";
 
 export default function FolderPage() {
     let [folderDialogShow, setFolderDialogShow] = useState(false);
     let [folders, setFolders] = useState([]);
     let {setLoading} = useContext(LoadingContext);
     let {showToast} = useContext(ToastContext);
+    let isMounted = IsMounted();
 
     const loadFolders = useCallback(() => {
         setLoading(true);
         Server.get(`/folder/`)
             .then(response => {
-                if (response.statusText === 'OK')
+                if (response.statusText === 'OK' && isMounted())
                     setFolders(response.data['data']);
             })
             .catch(err => {
@@ -31,7 +33,7 @@ export default function FolderPage() {
             .finally(() => {
                 setLoading(false);
             });
-    }, [setLoading, showToast]);
+    }, [setLoading, showToast, isMounted]);
 
     useEffect(() => {
         loadFolders();
