@@ -10,6 +10,7 @@ import {Transition} from "@headlessui/react";
 import {PlusIcon} from "@heroicons/react/solid";
 import AddImageDialog from "../Components/AddImageDialog";
 import {IsMounted} from "../utils/IsMounted";
+import Photo from "../Components/Photo";
 
 function getImageSize(url) {
     return new Promise((resolve, reject) => {
@@ -32,6 +33,7 @@ async function mapToPhoto(image) {
     let {width, height} = await getImageSize(image['path']);
     return {
         src: image['path'],
+        id: image['_id'],
         width,
         height
     };
@@ -125,6 +127,45 @@ export default function ImagesPage() {
         });
     }
 
+    function deleteImage(key, onDelete) {
+        setLoading(true);
+        Server
+            .delete(`/folder/${folderId}/images/${key}/`)
+            .then(res => {
+                if (res.statusText === 'OK') {
+                    showToast({
+                        title: 'Deleted',
+                        text: 'Image Deleted Successfully!',
+                        type: 'success'
+                    });
+                    isMounted() && onDelete();
+                    let newPhotos = photos.filter((photo) => photo.id !== key);
+                    setTimeout(() => isMounted() && setPhotos(newPhotos), 200);
+                }
+            })
+            .catch(() => {
+                showToast({
+                    title: 'Error',
+                    text: 'Couldn\'t delete this image',
+                    type: 'fail'
+                });
+            })
+            .finally(() => setLoading(false));
+    }
+
+    function render_image(thumb) {
+        return (<Photo
+            key={thumb.key || thumb.src}
+            id={thumb.id}
+            src={thumb.src}
+            // onClick={onClick ? handleClick : null}
+            alt={thumb.key || `undefined`}
+            width={thumb.width}
+            height={thumb.height}
+            onDelete={deleteImage}
+        />);
+    }
+
     return (
         <AddImageDialog
             mainAction={uploadImage}
@@ -132,7 +173,7 @@ export default function ImagesPage() {
             closeDialog={() => setAddImageDialogShow(false)}>
             <div className={`w-full h-full bg-indigo-50 overflow-y-auto p-2`}>
                 <div className={`container mx-auto`}>
-                    <GalleryLayout photos={photos}/>
+                    <GalleryLayout photos={photos} render_image={render_image}/>
                 </div>
                 {/*FAB*/}
                 <Transition

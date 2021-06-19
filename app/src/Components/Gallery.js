@@ -9,6 +9,7 @@ const Gallery = React.memo(
     function Gallery(
         {
             photos,
+            render_image,
             onClick,
         }) {
         const [containerWidth, setContainerWidth] = useState(0);
@@ -34,14 +35,15 @@ const Gallery = React.memo(
             };
         });
 
-        const handleClick = (event, {index}) => {
-            onClick(event, {
-                index,
-                photo: photos[index],
-                previous: photos[index - 1] || null,
-                next: photos[index + 1] || null,
-            });
-        };
+        // TODO: handle on image click
+        // const handleClick = (event, {index}) => {
+        //     onClick(event, {
+        //         index,
+        //         photo: photos[index],
+        //         previous: photos[index - 1] || null,
+        //         next: photos[index + 1] || null,
+        //     });
+        // };
 
         // no containerWidth until after first render with refs, skip calculations and render nothing
         if (!containerWidth) return <div ref={galleryEl}>&nbsp;</div>;
@@ -63,33 +65,23 @@ const Gallery = React.memo(
         return (
             <div ref={galleryEl} style={galleryStyle}>
                 {thumbs.map((thumb, i) => {
-                    const {containerHeight, ...photo} = thumb;
-                    return (<img
-                        key={thumb.key || thumb.src}
-                        {...photo}
-                        className={`p-px rounded-md object-cover`}
-                        onClick={onClick ? handleClick : null}
-                        alt={thumb.key || `undefined`}
-                    />)
+                    return render_image(thumb);
                 })}
             </div>
         );
     });
 
 const photoPropType = PropTypes.shape({
-    key: PropTypes.string,
+    id: PropTypes.string.isRequired,
     src: PropTypes.string.isRequired,
     width: PropTypes.number.isRequired,
-    height: PropTypes.number.isRequired,
-    alt: PropTypes.string,
-    title: PropTypes.string,
-    srcSet: PropTypes.oneOfType([PropTypes.string, PropTypes.array]),
-    sizes: PropTypes.oneOfType([PropTypes.string, PropTypes.array]),
+    height: PropTypes.number.isRequired
 });
 
 Gallery.propTypes = {
     photos: PropTypes.arrayOf(photoPropType).isRequired,
     onClick: PropTypes.func,
+    render_image: PropTypes.func.isRequired,
 };
 
 export default Gallery;

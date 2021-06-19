@@ -36,6 +36,9 @@ code {
     --tw-bg-opacity: 0.6;
 }
 
+.image:hover .menu {
+    --tw-bg-opacity: 0.6;
+}
 
 @keyframes increase {
     from {

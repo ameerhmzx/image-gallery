@@ -84,49 +84,107 @@ router.post('/', authenticated, async (req, res, next) => {
     }
 });
 
-// Update folder name
-// TODO: verify owner
-router.put('/:folder', authenticated, async (req, res, next) => {
+/**
+ *  Images
+ */
+
+// Get image
+router.get('/:folder/images', authenticated, async (req, res, next) => {
     res.setHeader('Content-Type', 'application/json');
     try {
-
-        if (req.body.name === undefined)
-            return res.sendStatus(400);
-
-        let filter = {_id: req.params.folder};
-        await Folder.findOneAndUpdate(filter, {name: req.body.name});
-
-        let folder = await Folder.findOne(filter);
-        res.status(200).json({
-            status: 'success',
-            data: folder
-        });
-
-    } catch (err) {
-        next(err);
-    }
-});
-
-// Delete folder along with images in it
-router.delete('/:folder', authenticated, async (req, res, next) => {
-    res.setHeader('Content-Type', 'application/json');
-    try {
-
         let folder = await Folder.findById(req.params.folder);
-        if (!isOwner(folder, req.user.id))
+        if (!haveReadAccess(folder, req.user.id))
             return res.sendStatus(403);
 
-        let deleted = await Folder.findByIdAndDelete(req.params.folder);
-        await deleteFolder(req, req.params.folder);
-        res.status(200).json({
+        const [images, imageCount] = await Promise.all([
+            Image.find({folder: folder._id})
+                .sort({createdAt: 'desc'})
+                .limit(req.query.limit)
+                .skip(req.skip)
+                .lean()
+                .exec(),
+            Image.countDocuments({folder: folder._id})
+        ]);
+
+        const pageCount = Math.ceil(imageCount / req.query.limit);
+        let validImages = [];
+        for (let image of images) {
+            validImages.push({
+                _id: image._id,
+                folder: image.folder.toString(),
+                path: await getImageDownloadUrl(req, image.path),
+                createdAt: image.createdAt
+            });
+        }
+
+        return res.status(200).json({
             status: 'success',
-            data: deleted
+            has_more: paginate.hasNextPages(req)(pageCount),
+            imageCount: imageCount,
+            pageCount: pageCount,
+            data: validImages
         });
+    } catch (err) {
+        next(err);
+    }
+});
+
+// Uploads image
+router.post('/:folder/images', authenticated, upload.single('image'), async (req, res, next) => {
+    res.setHeader('Content-Type', 'application/json');
+    if (req.file) {
+        try {
+            let folder = await Folder.findById(req.params.folder);
+            if (!haveWriteAccess(folder, req.user.id))
+                return res.sendStatus(403);
+
+            // Resize to max 800 width or 800 height
+            let image_buffer = await sharp(req.file.buffer).resize(800, 800, {
+                withoutEnlargement: true,
+                fit: sharp.fit.outside
+            }).toBuffer();
+
+            let loc = await uploadImage(req, req.params.folder, image_buffer);
+
+            let image = await Image.create({
+                folder: folder._id,
+                path: loc,
+            });
+
+            image.path = await getImageDownloadUrl(req, loc);
+
+            return res.status(200).json({
+                status: 'success',
+                data: image
+            });
+        } catch (err) {
+            return next(err);
+        }
+    }
+    return res.sendStatus(500);
+});
+
+// Delete image
+router.delete('/:folder/images/:iid', authenticated, async (req, res, next) => {
+    res.setHeader('Content-Type', 'application/json');
+    try {
+        let folder = await Folder.findById(req.params.folder);
+        if (!haveWriteAccess(folder, req.user.id))
+            return res.sendStatus(403);
+
+        let image = await Image.findOneAndDelete({_id: req.params.iid, folder: req.params.folder});
+        await deleteImage(req, image.path);
+
+        return res.sendStatus(200);
 
     } catch (err) {
         next(err);
     }
 });
+
+/**
+ * Partners
+ */
 
 // Get partners
 router.get('/:folder/partners', authenticated, async (req, res, next) => {
@@ -271,98 +329,50 @@ router.delete('/:folder/partners', authenticated, async (req, res, next) => {
     }
 });
 
-// Get image
-router.get('/:folder/images', authenticated, async (req, res, next) => {
+
+// Update folder name
+// TODO: verify owner
+router.put('/:folder', authenticated, async (req, res, next) => {
     res.setHeader('Content-Type', 'application/json');
     try {
-        let folder = await Folder.findById(req.params.folder);
-        if (!haveReadAccess(folder, req.user.id))
-            return res.sendStatus(403);
 
-        const [images, imageCount] = await Promise.all([
-            Image.find({folder: folder._id})
-                .sort({createdAt: 'desc'})
-                .limit(req.query.limit)
-                .skip(req.skip)
-                .lean()
-                .exec(),
-            Image.countDocuments({folder: folder._id})
-        ]);
+        if (req.body.name === undefined)
+            return res.sendStatus(400);
 
-        const pageCount = Math.ceil(imageCount / req.query.limit);
-        let validImages = [];
-        for (let image of images) {
-            validImages.push({
-                id: image._id,
-                folder: image.folder.toString(),
-                path: await getImageDownloadUrl(req, image.path),
-                createdAt: image.createdAt
-            });
-        }
+        let filter = {_id: req.params.folder};
+        await Folder.findOneAndUpdate(filter, {name: req.body.name});
 
-        return res.status(200).json({
+        let folder = await Folder.findOne(filter);
+        res.status(200).json({
             status: 'success',
-            has_more: paginate.hasNextPages(req)(pageCount),
-            imageCount: imageCount,
-            pageCount: pageCount,
-            data: validImages
+            data: folder
         });
+
     } catch (err) {
         next(err);
     }
 });
 
-// Uploads image 
-router.post('/:folder/images', authenticated, upload.single('image'), async (req, res, next) => {
-    res.setHeader('Content-Type', 'application/json');
-    if (req.file) {
-        try {
-            let folder = await Folder.findById(req.params.folder);
-            if (!haveWriteAccess(folder, req.user.id))
-                return res.sendStatus(403);
-
-            // Resize to max 800 width or 800 height
-            let image_buffer = await sharp(req.file.buffer).resize(800, 800, {
-                withoutEnlargement: true,
-                fit: sharp.fit.outside
-            }).toBuffer();
-
-            let loc = await uploadImage(req, req.params.folder, image_buffer);
-
-            let image = await Image.create({
-                folder: folder._id,
-                path: loc,
-            });
-
-            image.path = await getImageDownloadUrl(req, loc);
-
-            return res.status(200).json({
-                status: 'success',
-                data: image
-            });
-        } catch (err) {
-            return next(err);
-        }
-    }
-    return res.sendStatus(500);
-});
-
-// Delete image
-router.delete('/:folder/images/:iid', authenticated, async (req, res, next) => {
+// Delete folder along with images in it
+router.delete('/:folder', authenticated, async (req, res, next) => {
     res.setHeader('Content-Type', 'application/json');
     try {
+
         let folder = await Folder.findById(req.params.folder);
-        if (!haveWriteAccess(folder, req.user.id))
+        if (!isOwner(folder, req.user.id))
             return res.sendStatus(403);
 
-        let image = await Image.findOneAndDelete({_id: req.params.iid, folder: req.params.folder});
-        await deleteImage(req, image.path);
-
-        return res.sendStatus(200);
+        let deleted = await Folder.findByIdAndDelete(req.params.folder);
+        await deleteFolder(req, req.params.folder);
+        res.status(200).json({
+            status: 'success',
+            data: deleted
+        });
 
     } catch (err) {
         next(err);
     }
 });
+
 
 export default router;
