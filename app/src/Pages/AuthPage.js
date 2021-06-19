@@ -1,5 +1,5 @@
-import {Switch, Route, Link} from "react-router-dom";
-import {useContext, useState} from "react";
+import {Switch, Route, Link, useLocation} from "react-router-dom";
+import {useContext, useEffect, useState} from "react";
 import {AtSymbolIcon, LockClosedIcon, LockOpenIcon, UserIcon} from "@heroicons/react/solid";
 import {LoginIcon, UserAddIcon} from "@heroicons/react/outline";
 
@@ -18,7 +18,7 @@ export default function AuthPage() {
     const {setLoading} = useContext(LoadingContext);
     const {showToast} = useContext(ToastContext);
 
-    const [formState, setFormState] = useState({
+    const initialFormState = {
         name: '',
         email: '',
         pass: '',
@@ -27,7 +27,15 @@ export default function AuthPage() {
         err_pass: '',
         err_con_pass: '',
         err_name: ''
-    });
+    };
+    const [formState, setFormState] = useState(initialFormState);
+    const [form, setForm] = useState(undefined);
+
+    const location = useLocation().pathname;
+    useEffect(() => {
+        if(form)
+            form.reset();
+    }, [location, form]);
 
     function loginHandler(event) {
         event.preventDefault();
@@ -173,7 +181,7 @@ export default function AuthPage() {
                                 Create New Account
                             </div>
                             <div className="mt-8">
-                                <form onSubmit={registerHandler}>
+                                <form onSubmit={registerHandler} ref={(el) => setForm(el)}>
                                     <div className="flex flex-col mb-2">
                                         <div className="flex relative ">
                                             <span
@@ -212,7 +220,7 @@ export default function AuthPage() {
                                                <AtSymbolIcon className={'w-4 text-gray-500'}/>
                                             </span>
                                             <input type="email"
-                                                   id="register-email"
+                                                   id="email_tf"
                                                    name="email"
                                                    required
                                                    onChange={emailFieldListener}
@@ -315,7 +323,7 @@ export default function AuthPage() {
                                 Login To Your Account
                             </div>
                             <div className="mt-8">
-                                <form onSubmit={loginHandler}>
+                                <form onSubmit={loginHandler} ref={(el) => setForm(el)}>
                                     <div className="flex flex-col mb-2">
                                         <div className="flex relative ">
                                             <span
