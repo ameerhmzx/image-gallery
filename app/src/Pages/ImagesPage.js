@@ -12,15 +12,6 @@ import AddImageDialog from "../Components/AddImageDialog";
 import {IsMounted} from "../utils/IsMounted";
 import Photo from "../Components/Photo";
 
-function getImageSize(url) {
-    return new Promise((resolve, reject) => {
-        let img = new Image();
-        img.onload = () => resolve(reduce(img.width, img.height));
-        img.onerror = () => reject();
-        img.src = url;
-    });
-}
-
 function reduce(numerator, denominator) {
     let gcd = function gcd(a, b) {
         return b ? gcd(b, a % b) : a;
@@ -30,12 +21,13 @@ function reduce(numerator, denominator) {
 }
 
 async function mapToPhoto(image) {
-    let {width, height} = await getImageSize(image['path']);
+    let {width, height} = reduce(image['width'], image['height']);
     return {
         src: image['path'],
+        thumb: image['thumb'],
         id: image['_id'],
-        width,
-        height
+        width: width,
+        height: height
     };
 }
 
@@ -72,15 +64,18 @@ export default function ImagesPage() {
                             type: 'fail'
                         });
                     }
-                } else
-                    showToast({
-                        title: 'Failed',
-                        text: 'Unable to load Images',
-                        type: 'fail'
-                    });
-            }).finally(() => {
-            setLoading(false);
-        });
+                }
+            })
+            .catch(() => {
+                showToast({
+                    title: 'Failed',
+                    text: 'Unable to load Images',
+                    type: 'fail'
+                });
+            })
+            .finally(() => {
+                setLoading(false);
+            });
 
     }, [setLoading, showToast, folderId, isMounted]);
 
@@ -92,7 +87,8 @@ export default function ImagesPage() {
         setLoading(true);
         let formData = new FormData();
         formData.append('image', image);
-        Server.post(`/folder/${folderId}/images/`, formData)
+        Server
+            .post(`/folder/${folderId}/images/`, formData)
             .then(async response => {
                 if (response.statusText === 'OK') {
                     let res = response.data;
@@ -114,17 +110,19 @@ export default function ImagesPage() {
                         });
                         onError();
                     }
-                } else {
-                    showToast({
-                        title: 'Failed',
-                        text: 'Unable to upload Image',
-                        type: 'fail'
-                    });
-                    onError();
                 }
-            }).finally(() => {
-            setLoading(false);
-        });
+            })
+            .catch(() => {
+                showToast({
+                    title: 'Failed',
+                    text: 'Unable to upload Image',
+                    type: 'fail'
+                });
+                onError();
+            })
+            .finally(() => {
+                setLoading(false);
+            });
     }
 
     function deleteImage(key, onDelete) {
@@ -157,7 +155,7 @@ export default function ImagesPage() {
         return (<Photo
             key={thumb.key || thumb.src}
             id={thumb.id}
-            src={thumb.src}
+            src={thumb.thumb}
             // onClick={onClick ? handleClick : null}
             alt={thumb.key || `undefined`}
             width={thumb.width}

@@ -7,6 +7,19 @@ const imageSchema = new mongoose.Schema(
             required: true,
             unique: true
         },
+        thumb: {
+            type: String,
+            required: true,
+            unique: true
+        },
+        width: {
+            type: Number,
+            required: true
+        },
+        height: {
+            type: Number,
+            required: true
+        },
         folder: {
             type: mongoose.Types.ObjectId,
             ref: 'folder',

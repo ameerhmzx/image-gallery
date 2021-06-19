@@ -34,56 +34,6 @@ const upload = Multer({
 
 const router = Router();
 
-// Returns folders where owner = authenticated user
-router.get('/', authenticated, async (req, res, next) => {
-    res.setHeader('Content-Type', 'application/json');
-    try {
-
-        let folders = await Folder.find({owner: req.user.id});
-        res.status(200).json({
-            status: 'success',
-            data: folders
-        });
-
-    } catch (err) {
-        next(err);
-    }
-});
-
-// Returns folders where partners contain authenticated user
-router.get('/shared', authenticated, async (req, res, next) => {
-    res.setHeader('Content-Type', 'application/json');
-    try {
-        let folders = await Folder.find({"partners.user": req.user.id});
-        folders = folders.populate('owner');
-        res.status(200).json({
-            status: 'success',
-            data: folders
-        });
-    } catch (err) {
-        next(err);
-    }
-});
-
-// Create New Folder
-router.post('/', authenticated, async (req, res, next) => {
-    res.setHeader('Content-Type', 'application/json');
-    try {
-
-        if (req.body.name === undefined || req.body.name.trim() === '')
-            return res.sendStatus(400);
-
-        let folder = await Folder.create({name: req.body.name, owner: req.user.id});
-        res.status(201).json({
-            status: 'success',
-            data: folder
-        });
-
-    } catch (err) {
-        next(err);
-    }
-});
-
 /**
  *  Images
  */
@@ -113,6 +63,9 @@ router.get('/:folder/images', authenticated, async (req, res, next) => {
                 _id: image._id,
                 folder: image.folder.toString(),
                 path: await getImageDownloadUrl(req, image.path),
+                width: image.width,
+                height: image.height,
+                thumb: await getImageDownloadUrl(req, image.thumb),
                 createdAt: image.createdAt
             });
         }
@@ -138,20 +91,43 @@ router.post('/:folder/images', authenticated, upload.single('image'), async (req
             if (!haveWriteAccess(folder, req.user.id))
                 return res.sendStatus(403);
 
-            // Resize to max 800 width or 800 height
-            let image_buffer = await sharp(req.file.buffer).resize(800, 800, {
-                withoutEnlargement: true,
-                fit: sharp.fit.outside
-            }).toBuffer();
+            // Resize & generate thumbnail
+            let [image_buffer, thumb_buffer] = await Promise.all([
+                sharp(req.file.buffer).resize(800, 800, {
+                    withoutEnlargement: true,
+                    fit: sharp.fit.outside
+                }).toBuffer(),
+                sharp(req.file.buffer).resize(300, 300, {
+                    withoutEnlargement: true,
+                    fit: sharp.fit.outside
+                }).toBuffer()
+            ]);
 
-            let loc = await uploadImage(req, req.params.folder, image_buffer);
+            let {width, height} = await sharp(image_buffer).metadata();
+
+            // Upload to Firebase Storage
+            let [image_path, thumb_path] = await Promise.all(
+                [
+                    uploadImage(req, req.params.folder, image_buffer),
+                    uploadImage(req, req.params.folder, thumb_buffer)
+                ]
+            );
 
             let image = await Image.create({
                 folder: folder._id,
-                path: loc,
+                path: image_path,
+                thumb: thumb_path,
+                width: width,
+                height: height
             });
 
-            image.path = await getImageDownloadUrl(req, loc);
+            let [path, thumb] = await Promise.all([
+                getImageDownloadUrl(req, image_path),
+                getImageDownloadUrl(req, thumb_path)
+            ]);
+
+            image.path = path;
+            image.thumb = thumb;
 
             return res.status(200).json({
                 status: 'success',
@@ -173,7 +149,11 @@ router.delete('/:folder/images/:iid', authenticated, async (req, res, next) => {
             return res.sendStatus(403);
 
         let image = await Image.findOneAndDelete({_id: req.params.iid, folder: req.params.folder});
-        await deleteImage(req, image.path);
+
+        await Promise.all([
+            deleteImage(req, image.path),
+            deleteImage(req, image.thumb)
+        ]);
 
         return res.sendStatus(200);
 
@@ -329,6 +309,82 @@ router.delete('/:folder/partners', authenticated, async (req, res, next) => {
     }
 });
 
+/**
+ * Folders
+ */
+
+// Returns folders where owner = authenticated user
+router.get('/', authenticated, async (req, res, next) => {
+    res.setHeader('Content-Type', 'application/json');
+    try {
+
+        let data = [];
+        let folders = await Folder.find({owner: req.user.id});
+        let getThumb = async (id) => {
+            let image = await Image.find({folder: id})
+                .sort({createdAt: 'desc'})
+                .limit(1);
+            if(image.length > 0){
+                return await getImageDownloadUrl(req, image[0]['thumb']);
+            } else {
+                return undefined;
+            }
+        };
+
+        for (let folder of folders) {
+            data.push({
+                _id: folder._id,
+                name: folder.name,
+                owner: folder.owner,
+                partners: folder.partners,
+                createdAt: folder.createdAt,
+                thumb: await getThumb(folder._id)
+            })
+        }
+
+        res.status(200).json({
+            status: 'success',
+            data: data
+        });
+
+    } catch (err) {
+        next(err);
+    }
+});
+
+// Returns folders where partners contain authenticated user
+router.get('/shared', authenticated, async (req, res, next) => {
+    res.setHeader('Content-Type', 'application/json');
+    try {
+        let folders = await Folder.find({"partners.user": req.user.id});
+        folders = folders.populate('owner');
+        res.status(200).json({
+            status: 'success',
+            data: folders
+        });
+    } catch (err) {
+        next(err);
+    }
+});
+
+// Create New Folder
+router.post('/', authenticated, async (req, res, next) => {
+    res.setHeader('Content-Type', 'application/json');
+    try {
+
+        if (req.body.name === undefined || req.body.name.trim() === '')
+            return res.sendStatus(400);
+
+        let folder = await Folder.create({name: req.body.name, owner: req.user.id});
+        res.status(201).json({
+            status: 'success',
+            data: folder
+        });
+
+    } catch (err) {
+        next(err);
+    }
+});
 
 // Update folder name
 // TODO: verify owner

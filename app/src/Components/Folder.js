@@ -21,7 +21,6 @@ export default function Folder({folder, loadFolders}) {
     let {setLoading} = useContext(LoadingContext);
     let {showToast} = useContext(ToastContext);
     const [isShowing, setShowing] = useState(true);
-    const [thumb, setThumb] = useState(undefined);
 
     //TODO: implement options & remove
 
@@ -70,27 +69,6 @@ export default function Folder({folder, loadFolders}) {
     else if (typeof folder.owner === "object")
         isOwner = folder.owner['_id'] === getUserId(sessionStorage.getItem('jwtToken'));
 
-    // Load Thumb image
-    useEffect(() => {
-        let url = new URL(`${process.env.REACT_APP_SERVER_URL}/folder/${folder._id}/images`)
-        url.search = new URLSearchParams({limit: 1}).toString();
-        fetch(url, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${sessionStorage.getItem('jwtToken')}`
-            }
-        }).then(async response => {
-            if (response.ok) {
-                let res = await response.json();
-                if (res['data'] !== undefined && res['data'].length >= 1) {
-                    setThumb(res['data'][0]['path']);
-                }
-            }
-        });
-    }, [folder._id]);
-
-
     return (
         <Transition
             appear
@@ -111,10 +89,11 @@ export default function Folder({folder, loadFolders}) {
                     ' hover:shadow-md' +
                     ' duration-300 cursor-pointer flex flex-col items-center justify-content'}>
 
-                    {thumb ?
+                    {folder.thumb ?
+                        // TODO: lazy load thumb
                         <img
                             className={'object-cover h-36 w-full'}
-                            src={thumb}
+                            src={folder.thumb}
                             alt={`Folder named ${folder.name}`}
                         /> :
                         <svg className={`h-36 w-full text-indigo-200 filter blur-sm`} fill="none"

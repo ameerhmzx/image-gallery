@@ -74,6 +74,7 @@ const Gallery = React.memo(
 const photoPropType = PropTypes.shape({
     id: PropTypes.string.isRequired,
     src: PropTypes.string.isRequired,
+    thumb: PropTypes.string.isRequired,
     width: PropTypes.number.isRequired,
     height: PropTypes.number.isRequired
 });
