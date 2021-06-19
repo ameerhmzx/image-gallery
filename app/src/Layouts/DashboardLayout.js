@@ -238,9 +238,9 @@ export default function DashboardLayout({children}) {
                         </div>
                     </div>
                 </header>
-                <>
+                <div className={`bg-indigo-50 w-full h-full overflow-y-auto`}>
                     {children}
-                </>
+                </div>
             </div>
         </div>
     )

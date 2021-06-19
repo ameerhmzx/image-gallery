@@ -10,6 +10,9 @@ import LoadingContext from "../Context/LoadingContext";
 import ToastContext from "../Context/ToastContext";
 import Server from "../utils/Server";
 
+import {LazyLoadImage} from 'react-lazy-load-image-component';
+import 'react-lazy-load-image-component/src/effects/blur.css';
+
 function formatDate(date) {
     let d = new Date(date);
     return `${d.getDate()}/${d.getMonth()}/${d.getFullYear()} `;
@@ -90,10 +93,11 @@ export default function Folder({folder, loadFolders}) {
                     ' duration-300 cursor-pointer flex flex-col items-center justify-content'}>
 
                     {folder.thumb ?
-                        // TODO: lazy load thumb
-                        <img
+                        <LazyLoadImage
                             className={'object-cover h-36 w-full'}
+                            wrapperClassName={'bg-indigo-100'}
                             src={folder.thumb}
+                            effect="blur"
                             alt={`Folder named ${folder.name}`}
                         /> :
                         <svg className={`h-36 w-full text-indigo-200 filter blur-sm`} fill="none"

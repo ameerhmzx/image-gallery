@@ -1,5 +1,5 @@
 import {useParams} from 'react-router-dom';
-import {useCallback, useContext, useEffect, useState} from "react";
+import {useCallback, useContext, useEffect, useRef, useState} from "react";
 
 import LoadingContext from "../Context/LoadingContext";
 import ToastContext from "../Context/ToastContext";
@@ -46,10 +46,13 @@ export default function ImagesPage() {
     let [addImageDialogShow, setAddImageDialogShow] = useState(false);
     let isMounted = IsMounted();
 
-    // TODO: paginate
+    const [hasMore, setHasMore] = useState(true);
+    const [pageNumber, setPageNumber] = useState(0);
+    const [isRequesting, setIsRequesting] = useState(false);
 
     const loadImages = useCallback(() => {
         setLoading(true);
+        setIsRequesting(true);
         Server.get(`/folder/${folderId}/images/`)
             .then(async response => {
                 if (response.statusText === 'OK') {
@@ -57,6 +60,8 @@ export default function ImagesPage() {
                     if (res['status'] === 'success' && isMounted()) {
                         let photos = await mapToPhotos(res['data']);
                         isMounted() && setPhotos(photos);
+                        isMounted() && setHasMore(res['has_more']);
+                        isMounted() && setPageNumber(1);
                     } else {
                         showToast({
                             title: 'Failed',
@@ -75,9 +80,50 @@ export default function ImagesPage() {
             })
             .finally(() => {
                 setLoading(false);
+                setIsRequesting(false);
             });
 
-    }, [setLoading, showToast, folderId, isMounted]);
+    }, [setLoading, showToast, folderId, isMounted, setPageNumber, setIsRequesting]);
+
+    const loadNextPage = useCallback(() => {
+        if (isRequesting || !hasMore) return;
+        setIsRequesting(true);
+        setLoading(true);
+        Server.get(`/folder/${folderId}/images/`, {
+            params: {
+                'page': pageNumber + 1
+            }
+        })
+            .then(async response => {
+                if (response.statusText === 'OK') {
+                    let res = response.data;
+                    if (res['status'] === 'success' && isMounted()) {
+                        let prevPhotos = photos.slice();
+                        let nextPhotos = await mapToPhotos(res['data']);
+                        isMounted() && setPhotos(prevPhotos.concat(nextPhotos));
+                        isMounted() && setHasMore(res['has_more']);
+                        isMounted() && setPageNumber(pageNumber + 1);
+                    } else {
+                        showToast({
+                            title: 'Failed',
+                            text: 'Unable to load Images',
+                            type: 'fail'
+                        });
+                    }
+                }
+            })
+            .catch(() => {
+                showToast({
+                    title: 'Failed',
+                    text: 'Unable to load Images',
+                    type: 'fail'
+                });
+            })
+            .finally(() => {
+                setLoading(false);
+                setIsRequesting(false);
+            });
+    }, [setPageNumber, setLoading, showToast, isMounted, setIsRequesting, folderId, hasMore, isRequesting, pageNumber, photos]);
 
     useEffect(() => {
         loadImages();
@@ -151,26 +197,40 @@ export default function ImagesPage() {
     }
 
     function render_image(thumb) {
-        return (<Photo
-            key={thumb.key || thumb.src}
-            id={thumb.id}
-            src={thumb.thumb}
-            // onClick={onClick ? handleClick : null}
-            alt={thumb.key || `undefined`}
-            width={thumb.width}
-            height={thumb.height}
-            onDelete={deleteImage}
-        />);
+        return (
+            <Photo
+                key={thumb.key || thumb.src}
+                id={thumb.id}
+                src={thumb.thumb}
+                // onClick={onClick ? handleClick : null}
+                alt={thumb.key || `undefined`}
+                width={thumb.width}
+                height={thumb.height}
+                onDelete={deleteImage}
+            />);
     }
+
+    const observer = useRef();
+    const nextPageRef = useCallback((el) => {
+        if(isRequesting) return;
+        if(observer.current) observer.current.disconnect();
+        observer.current = new IntersectionObserver(entries => {
+            if(entries[0].isIntersecting){
+                loadNextPage()
+            }
+        });
+        if(el) observer.current.observe(el);
+    }, [isRequesting, loadNextPage]);
 
     return (
         <AddImageDialog
             mainAction={uploadImage}
             show={addImageDialogShow}
             closeDialog={() => setAddImageDialogShow(false)}>
-            <div className={`w-full h-full bg-indigo-50 overflow-y-auto p-2`}>
+            <div className={`w-full h-full bg-indigo-50 p-2`}>
                 <div className={`container mx-auto`}>
                     <GalleryLayout photos={photos} render_image={render_image}/>
+                    <div className={`h-14`} ref={nextPageRef}/>
                 </div>
                 {/*FAB*/}
                 <Transition
