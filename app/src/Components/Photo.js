@@ -10,9 +10,9 @@ import 'react-lazy-load-image-component/src/effects/blur.css';
 export default function Photo(props) {
 
     return (
-        <div className={`relative image`}>
+        <div className={`relative image`} style={{ height: props.height }}>
             <LazyLoadImage
-                className={`p-px object-cover `}
+                wrapperClassName={`p-px object-cover bg-indigo-100`}
                 key={props.id}
                 src={props.src}
                 onClick={props.onClick}
