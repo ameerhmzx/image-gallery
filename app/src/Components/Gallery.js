@@ -49,12 +49,12 @@ const Gallery = React.memo(
         if (!containerWidth) return <div ref={galleryEl}>&nbsp;</div>;
         // subtract 1 pixel because the browser may round up a pixel
         const width = containerWidth - 1;
-        let galleryStyle, thumbs, limitNodeSearch, targetRowHeight = 240, margin = 2;
+        let galleryStyle, thumbs, limitNodeSearch, targetRowHeight = 300, margin = 2;
 
         // set how many neighboring nodes the graph will visit
         if (limitNodeSearch === undefined) {
-            limitNodeSearch = 2;
-            if (containerWidth >= 450) {
+            limitNodeSearch = 1;
+            if (containerWidth >= 400) {
                 limitNodeSearch = findIdealNode({containerWidth, targetRowHeight});
             }
         }

@@ -43,7 +43,10 @@ export const computeRowLayout = ({ containerWidth, limitNodeSearch, targetRowHei
     // console.log(`time to find the shortest path: ${(+new Date() - t)} ms`);
     for (let i = 1; i < path.length; ++i) {
         const row = photos.slice(path[i - 1], path[i]);
-        const height = getCommonHeight(row, containerWidth, margin);
+        let height = getCommonHeight(row, containerWidth, margin);
+        if(height > targetRowHeight + 60) {
+            height = targetRowHeight + 60;
+        }
         for (let j = path[i - 1]; j < path[i]; ++j) {
             photos[j].width = round(height * ratio(photos[j]), 1);
             photos[j].height = height;
