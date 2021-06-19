@@ -125,7 +125,7 @@ export default function ImagesPage() {
             });
     }
 
-    function deleteImage(key, onDelete) {
+    function deleteImage(key) {
         setLoading(true);
         Server
             .delete(`/folder/${folderId}/images/${key}/`)
@@ -136,9 +136,8 @@ export default function ImagesPage() {
                         text: 'Image Deleted Successfully!',
                         type: 'success'
                     });
-                    isMounted() && onDelete();
                     let newPhotos = photos.filter((photo) => photo.id !== key);
-                    setTimeout(() => isMounted() && setPhotos(newPhotos), 200);
+                    setPhotos(newPhotos);
                 }
             })
             .catch(() => {

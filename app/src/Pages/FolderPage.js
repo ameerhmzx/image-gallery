@@ -23,7 +23,7 @@ export default function FolderPage() {
                 if (response.statusText === 'OK' && isMounted())
                     setFolders(response.data['data']);
             })
-            .catch(err => {
+            .catch(() => {
                 showToast({
                     title: 'Failed',
                     text: 'Unable to load folders',

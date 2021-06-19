@@ -4,7 +4,7 @@ import {XIcon} from "@heroicons/react/solid";
 import {Link} from "react-router-dom";
 import {getUserId} from "../utils/AuthUtils";
 
-import {useContext, useEffect, useState} from "react";
+import {useContext, useState} from "react";
 import AlertDialogContext from "../Context/AlertDialogContext";
 import LoadingContext from "../Context/LoadingContext";
 import ToastContext from "../Context/ToastContext";
