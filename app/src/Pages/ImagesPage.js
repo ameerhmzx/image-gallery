@@ -5,11 +5,12 @@ import LoadingContext from "../Context/LoadingContext";
 import ToastContext from "../Context/ToastContext";
 import GalleryLayout from "../Components/Gallery";
 import Server from "../utils/Server"
+import AlertDialogContext from "../Context/AlertDialogContext";
 
 import {Transition} from "@headlessui/react";
 import {PlusIcon} from "@heroicons/react/solid";
-import AddImageDialog from "../Components/AddImageDialog";
 import {IsMounted} from "../utils/IsMounted";
+import AddImageDialog from "../Components/AddImageDialog";
 import Photo from "../Components/Photo";
 
 function reduce(numerator, denominator) {
@@ -42,8 +43,11 @@ export default function ImagesPage() {
     let {folderId} = useParams();
     let {setLoading} = useContext(LoadingContext);
     let {showToast} = useContext(ToastContext);
+    let {showAlertDialog} = useContext(AlertDialogContext);
+
     let [photos, setPhotos] = useState([]);
     let [addImageDialogShow, setAddImageDialogShow] = useState(false);
+    let [deleteKey, setDeleteKey] = useState('');
     let isMounted = IsMounted();
 
     const [hasMore, setHasMore] = useState(true);
@@ -129,6 +133,24 @@ export default function ImagesPage() {
         loadImages();
     }, [loadImages]);
 
+    useEffect(() => {
+        if (deleteKey !== '') {
+            showAlertDialog({
+                show: true,
+                title: 'Delete Image',
+                content: 'Are you sure you want to delete this image?',
+                dismissible: true,
+                type: 'danger',
+                mainActionText: 'Delete',
+                cancelText: 'Cancel',
+                onMainAction: deleteImage,
+                onCancel: () => {
+                    setDeleteKey('');
+                }
+            });
+        }
+    }, [deleteKey]);
+
     function uploadImage(image, onComplete, onError) {
         setLoading(true);
         let formData = new FormData();
@@ -171,10 +193,11 @@ export default function ImagesPage() {
             });
     }
 
-    function deleteImage(key) {
+    function deleteImage() {
         setLoading(true);
+        setDeleteKey('');
         Server
-            .delete(`/folder/${folderId}/images/${key}/`)
+            .delete(`/folder/${folderId}/images/${deleteKey}/`)
             .then(res => {
                 if (res.statusText === 'OK') {
                     showToast({
@@ -182,7 +205,7 @@ export default function ImagesPage() {
                         text: 'Image Deleted Successfully!',
                         type: 'success'
                     });
-                    let newPhotos = photos.filter((photo) => photo.id !== key);
+                    let newPhotos = photos.filter((photo) => photo.id !== deleteKey);
                     setPhotos(newPhotos);
                 }
             })
@@ -206,20 +229,20 @@ export default function ImagesPage() {
                 alt={thumb.key || `undefined`}
                 width={thumb.width}
                 height={thumb.height}
-                onDelete={deleteImage}
+                onDelete={(key) => setDeleteKey(key)}
             />);
     }
 
     const observer = useRef();
     const nextPageRef = useCallback((el) => {
-        if(isRequesting) return;
-        if(observer.current) observer.current.disconnect();
+        if (isRequesting) return;
+        if (observer.current) observer.current.disconnect();
         observer.current = new IntersectionObserver(entries => {
-            if(entries[0].isIntersecting){
+            if (entries[0].isIntersecting) {
                 loadNextPage()
             }
         });
-        if(el) observer.current.observe(el);
+        if (el) observer.current.observe(el);
     }, [isRequesting, loadNextPage]);
 
     return (
