@@ -4,7 +4,7 @@ import {XIcon} from "@heroicons/react/solid";
 import {Link} from "react-router-dom";
 import {getUserId} from "../utils/AuthUtils";
 
-import {useContext, useState} from "react";
+import {useContext, useRef, useState} from "react";
 import AlertDialogContext from "../Context/AlertDialogContext";
 import LoadingContext from "../Context/LoadingContext";
 import ToastContext from "../Context/ToastContext";
@@ -12,22 +12,23 @@ import Server from "../utils/Server";
 
 import {LazyLoadImage} from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
+import FolderOptionContext from "../Context/FolderOptionContext";
 
 function formatDate(date) {
     let d = new Date(date);
-    return `${d.getDate()}/${d.getMonth()}/${d.getFullYear()} `;
+    return `${d.getDate()}/${d.getMonth()}/${d.getFullYear()}`;
 }
 
 export default function Folder({folder, loadFolders}) {
-
+    const [isShowing, setShowing] = useState(true);
     let {showAlertDialog} = useContext(AlertDialogContext);
     let {setLoading} = useContext(LoadingContext);
     let {showToast} = useContext(ToastContext);
-    const [isShowing, setShowing] = useState(true);
+    let {setFolder:showFolderOptions} = useContext(FolderOptionContext);
 
-    //TODO: implement options & remove
+    const userid = useRef(getUserId(sessionStorage.getItem('jwtToken')))["current"];
 
-    const deleteFolder = function () {
+    function deleteFolder() {
         setLoading(true);
         Server
             .delete(`/folder/${folder._id}`)
@@ -52,7 +53,7 @@ export default function Folder({folder, loadFolders}) {
             .finally(() => setLoading(false));
     }
 
-    const onDeleteClick = function () {
+    function onDeleteClick() {
         showAlertDialog({
             show: true,
             type: 'danger',
@@ -65,12 +66,51 @@ export default function Folder({folder, loadFolders}) {
         });
     }
 
+    function removeFolder() {
+        setLoading(true);
+        Server
+            .delete(`/folder/${folder._id}/partners/${userid}`)
+            .then(res => {
+                showToast({
+                    title: 'Success',
+                    text: `Folder named '${res.data['data']['name']}' removed successfully!`,
+                    type: 'success'
+                });
+                setShowing(false);
+                setTimeout(loadFolders, 200);
+            })
+            .catch(err => {
+                showToast({
+                    title: 'Failed',
+                    text: 'Unable to remove folder',
+                    type: 'fail'
+                });
+            })
+            .finally(() => setLoading(false));
+    }
+
+    function onRemoveClick() {
+        showAlertDialog({
+            show: true,
+            type: 'danger',
+            mainActionText: 'Remove',
+            title: 'Are you sure?',
+            content: `Make sure '${folder.name}' is the folder you want to remove. 
+            You won't be able to access this folder unless owner of this folder share this again.`,
+            onMainAction: removeFolder
+        });
+    }
+
+    function onOptionsClick() {
+        showFolderOptions(folder);
+    }
+
     // Verify Ownership
     let isOwner = false;
     if (typeof folder.owner === "string")
-        isOwner = folder.owner === getUserId(sessionStorage.getItem('jwtToken'));
+        isOwner = folder.owner === userid;
     else if (typeof folder.owner === "object")
-        isOwner = folder.owner['_id'] === getUserId(sessionStorage.getItem('jwtToken'));
+        isOwner = folder.owner['_id'] === userid;
 
     return (
         <Transition
@@ -120,7 +160,7 @@ export default function Folder({folder, loadFolders}) {
                     <Menu.Button className={'relative outline-none focus:outline-none'}>
                         {({open}) =>
                             <div>
-                                < DotsVerticalIcon
+                                <DotsVerticalIcon
                                     className={`duration-300 w-8 h-8 px-2 py-1 text-gray-50 transform
                             ${open ? 'rotate-90 opacity-0' : 'rotate-0 opacity-100'}`}/>
                                 <XIcon className={`absolute top-0 left-0 duration-300 w-8 h-8 px-2 py-1 text-gray-50 transform
@@ -142,6 +182,7 @@ export default function Folder({folder, loadFolders}) {
                             <Menu.Item>
                                 {({active}) => (
                                     <button
+                                        onClick={onOptionsClick}
                                         className={`${active && 'bg-indigo-600 text-white'} 
                                         text-sm pl-2 pr-4 py-2 whitespace-nowrap flex items-center
                                         rounded-md mx-1
@@ -171,6 +212,7 @@ export default function Folder({folder, loadFolders}) {
                                     <Menu.Item>
                                         {({active}) => (
                                             <button
+                                                onClick={onRemoveClick}
                                                 className={`
                                         ${active && 'bg-red-600 text-white'} 
                                         text-sm pl-2 pr-4 py-2 whitespace-nowrap flex items-center

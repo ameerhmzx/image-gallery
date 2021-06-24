@@ -6,11 +6,10 @@ import {XIcon} from "@heroicons/react/solid";
 import {LazyLoadImage} from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
 
-//TODO: use lazy loading
 export default function Photo(props) {
 
     return (
-        <div className={`relative image`} style={{ height: props.height }}>
+        <div className={`relative image`} style={{height: props.height}}>
             <LazyLoadImage
                 wrapperClassName={`p-px object-cover bg-indigo-100`}
                 key={props.id}

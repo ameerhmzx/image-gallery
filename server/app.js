@@ -27,7 +27,7 @@ app.use(logger('dev'));
 app.use(cors());
 app.use(compression());
 app.use(json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: true }));
 app.use(jwt({
     secret: process.env.jsecret,
     algorithms: ['HS256'],

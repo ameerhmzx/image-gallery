@@ -175,12 +175,14 @@ router.get('/:folder/partners', authenticated, async (req, res, next) => {
         if (!isOwner(folder, req.user.id))
             return res.sendStatus(403);
 
-        folder = await folder.populate('partners.user');
-        let partners = folder.partners;
+        let populated = await Folder.populate(folder, {
+            path: 'partners.user',
+            select: 'email'
+        });
 
         res.status(200).json({
             status: 'success',
-            data: partners
+            data: populated.partners
         });
 
     } catch (err) {
@@ -192,20 +194,21 @@ router.get('/:folder/partners', authenticated, async (req, res, next) => {
 router.post('/:folder/partners', authenticated, async (req, res, next) => {
     res.setHeader('Content-Type', 'application/json');
     try {
-        let partner;
-
-        if (!validatePartner(req.user.id, req.body.partner))
-            return res.sendStatus(400);
-
         let folder = await Folder.findById(req.params.folder);
         if (!isOwner(folder, req.user.id))
             return res.sendStatus(403);
 
-        let temp = await User.findOne({email: req.body.partner});
+        let temp = await User.findOne({'email': req.body.partner});
+
+        if (!validatePartner(req.user.id, temp._id))
+            return res.sendStatus(400);
+
         let partner_id = temp._id;
 
+        let partner;
+
         for (partner of folder.partners) {
-            if (partner.user.toString() === partner_id) {
+            if (partner.user.toString() === partner_id.toString()) {
                 let err = {};
                 err.status = 409;
                 return next(err);
@@ -217,11 +220,16 @@ router.post('/:folder/partners', authenticated, async (req, res, next) => {
             partner.access = 1;
 
         folder.partners.push(partner);
-        let data = await folder.save();
+        await folder.save();
+
+        let populated = await Folder.populate(folder, {
+            path: 'partners.user',
+            select: 'email'
+        });
 
         return res.status(200).json({
             status: 'success',
-            data: data
+            data: populated.partners
         });
 
     } catch (err) {
@@ -262,7 +270,6 @@ router.put('/:folder/partners/:pid', authenticated, async (req, res, next) => {
 });
 
 // Remove partner where userid = pid
-// TODO: enable partner self remove
 router.delete('/:folder/partners/:pid', authenticated, async (req, res, next) => {
     res.setHeader('Content-Type', 'application/json');
     try {
@@ -270,17 +277,16 @@ router.delete('/:folder/partners/:pid', authenticated, async (req, res, next) =>
             return res.sendStatus(400);
 
         let folder = await Folder.findById(req.params.folder);
-        if (!isOwner(folder, req.user.id))
+        if (!(isOwner(folder, req.user.id) || req.user.id.toString() === req.params.pid.toString()))
             return res.sendStatus(403);
 
         folder.partners = folder.partners.filter(function (partner) {
-            return partner.user !== req.params.pid
+            return partner.user.toString() !== req.params.pid.toString()
         });
 
-        let data = await folder.save();
+        await folder.save();
         res.status(200).json({
-            status: 'success',
-            data: data
+            status: 'success'
         });
 
     } catch (err) {
@@ -298,10 +304,9 @@ router.delete('/:folder/partners', authenticated, async (req, res, next) => {
 
         folder.partners = [];
 
-        let data = await folder.save();
+        await folder.save();
         res.status(200).json({
             status: 'success',
-            data: data
         });
 
     } catch (err) {
@@ -324,7 +329,7 @@ router.get('/', authenticated, async (req, res, next) => {
             let image = await Image.find({folder: id})
                 .sort({createdAt: 'desc'})
                 .limit(1);
-            if(image.length > 0){
+            if (image.length > 0) {
                 return await getImageDownloadUrl(req, image[0]['thumb']);
             } else {
                 return undefined;

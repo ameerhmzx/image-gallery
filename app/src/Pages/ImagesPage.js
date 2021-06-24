@@ -129,6 +129,36 @@ export default function ImagesPage() {
             });
     }, [setPageNumber, setLoading, showToast, isMounted, setIsRequesting, folderId, hasMore, isRequesting, pageNumber, photos]);
 
+    const deleteImage = useCallback(() => {
+        if (deleteKey !== '') {
+            setDeleteKey('');
+            setLoading(true);
+            Server
+                .delete(`/folder/${folderId}/images/${deleteKey}/`)
+                .then(res => {
+                    if (res.statusText === 'OK') {
+                        showToast({
+                            title: 'Deleted',
+                            text: 'Image Deleted Successfully!',
+                            type: 'success'
+                        });
+                        let newPhotos = photos.filter((photo) => photo.id !== deleteKey);
+                        setPhotos(newPhotos);
+                    }
+                })
+                .catch(() => {
+                    showToast({
+                        title: 'Error',
+                        text: 'Couldn\'t delete this image',
+                        type: 'fail'
+                    });
+                })
+                .finally(() => {
+                    setLoading(false);
+                });
+        }
+    }, [deleteKey, setDeleteKey, setLoading, showToast, folderId, photos]);
+
     useEffect(() => {
         loadImages();
     }, [loadImages]);
@@ -149,7 +179,7 @@ export default function ImagesPage() {
                 }
             });
         }
-    }, [deleteKey]);
+    }, [deleteKey, showAlertDialog, deleteImage]);
 
     function uploadImage(image, onComplete, onError) {
         setLoading(true);
@@ -191,32 +221,6 @@ export default function ImagesPage() {
             .finally(() => {
                 setLoading(false);
             });
-    }
-
-    function deleteImage() {
-        setLoading(true);
-        setDeleteKey('');
-        Server
-            .delete(`/folder/${folderId}/images/${deleteKey}/`)
-            .then(res => {
-                if (res.statusText === 'OK') {
-                    showToast({
-                        title: 'Deleted',
-                        text: 'Image Deleted Successfully!',
-                        type: 'success'
-                    });
-                    let newPhotos = photos.filter((photo) => photo.id !== deleteKey);
-                    setPhotos(newPhotos);
-                }
-            })
-            .catch(() => {
-                showToast({
-                    title: 'Error',
-                    text: 'Couldn\'t delete this image',
-                    type: 'fail'
-                });
-            })
-            .finally(() => setLoading(false));
     }
 
     function render_image(thumb) {
