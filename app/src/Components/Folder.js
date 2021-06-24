@@ -19,7 +19,7 @@ function formatDate(date) {
     return `${d.getDate()}/${d.getMonth()}/${d.getFullYear()}`;
 }
 
-export default function Folder({folder, loadFolders}) {
+export default function Folder({folder, loadFolders, photo_path='photos'}) {
     const [isShowing, setShowing] = useState(true);
     let {showAlertDialog} = useContext(AlertDialogContext);
     let {setLoading} = useContext(LoadingContext);
@@ -73,10 +73,9 @@ export default function Folder({folder, loadFolders}) {
             .then(res => {
                 showToast({
                     title: 'Success',
-                    text: `Folder named '${res.data['data']['name']}' removed successfully!`,
+                    text: `Folder removed successfully!`,
                     type: 'success'
                 });
-                setShowing(false);
                 setTimeout(loadFolders, 200);
             })
             .catch(err => {
@@ -125,7 +124,7 @@ export default function Folder({folder, loadFolders}) {
         >
             <div className={'relative w-full max-w-sm mx-auto sm:mx-0 folder'}>
                 <Link
-                    to={`/photos/${folder._id}`}
+                    to={`/${photo_path}/${folder._id}`}
                     id={folder._id}
                     className={'overflow-hidden bg-white min-w-32 min-h-64 rounded-md ' +
                     ' ring-1 ring-indigo-100' +
@@ -179,19 +178,21 @@ export default function Folder({folder, loadFolders}) {
                         <Menu.Items
                             className={'absolute z-30 right-0 mt-6 mr-2 origin-top-right outline-none outline-gray-300 ' +
                             'rounded-md outline-none shadow-lg bg-white py-1 flex flex-col text-gray-700'}>
-                            <Menu.Item>
-                                {({active}) => (
-                                    <button
-                                        onClick={onOptionsClick}
-                                        className={`${active && 'bg-indigo-600 text-white'} 
+                            {isOwner &&
+                                <Menu.Item>
+                                    {({active}) => (
+                                        <button
+                                            onClick={onOptionsClick}
+                                            className={`${active && 'bg-indigo-600 text-white'} 
                                         text-sm pl-2 pr-4 py-2 whitespace-nowrap flex items-center
                                         rounded-md mx-1
                                         outline-none focus:outline-none`}>
-                                        <CogIcon className={'w-4 mx-1'}/>
-                                        Options
-                                    </button>
-                                )}
-                            </Menu.Item>
+                                            <CogIcon className={'w-4 mx-1'}/>
+                                            Options
+                                        </button>
+                                    )}
+                                </Menu.Item>
+                            }
                             {
                                 isOwner ?
                                     <Menu.Item>

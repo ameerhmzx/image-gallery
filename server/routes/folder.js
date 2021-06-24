@@ -273,9 +273,6 @@ router.put('/:folder/partners/:pid', authenticated, async (req, res, next) => {
 router.delete('/:folder/partners/:pid', authenticated, async (req, res, next) => {
     res.setHeader('Content-Type', 'application/json');
     try {
-        if (!validatePartner(req.user.id, req.params.pid))
-            return res.sendStatus(400);
-
         let folder = await Folder.findById(req.params.folder);
         if (!(isOwner(folder, req.user.id) || req.user.id.toString() === req.params.pid.toString()))
             return res.sendStatus(403);
@@ -361,11 +358,35 @@ router.get('/', authenticated, async (req, res, next) => {
 router.get('/shared', authenticated, async (req, res, next) => {
     res.setHeader('Content-Type', 'application/json');
     try {
-        let folders = await Folder.find({"partners.user": req.user.id});
-        folders = folders.populate('owner');
+        let folders = await Folder.find({"partners.user": req.user.id}, "-partners");
+
+        let data = [];
+
+        let getThumb = async (id) => {
+            let image = await Image.find({folder: id})
+                .sort({createdAt: 'desc'})
+                .limit(1);
+            if (image.length > 0) {
+                return await getImageDownloadUrl(req, image[0]['thumb']);
+            } else {
+                return undefined;
+            }
+        };
+
+        for (let folder of folders) {
+            data.push({
+                _id: folder._id,
+                name: folder.name,
+                owner: folder.owner,
+                partners: folder.partners,
+                createdAt: folder.createdAt,
+                thumb: await getThumb(folder._id)
+            })
+        }
+
         res.status(200).json({
             status: 'success',
-            data: folders
+            data: data
         });
     } catch (err) {
         next(err);
