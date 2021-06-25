@@ -21,6 +21,7 @@ export default function Photo(props) {
                 effect="blur"
             />
 
+            {props.showMenu &&
             <Menu as={'div'}
                   className={'absolute m-px right-0 top-0 flex items-center justify-center duration-500 menu rounded-bl-md bg-indigo-500 bg-opacity-30 hover:bg-opacity-80'}>
                 <Menu.Button className={'relative outline-none focus:outline-none'}>
@@ -62,6 +63,7 @@ export default function Photo(props) {
                     </Menu.Items>
                 </Transition>
             </Menu>
+            }
         </div>
     );
 }
@@ -72,5 +74,6 @@ Photo.prototypes = {
     width: PropTypes.number.isRequired,
     height: PropTypes.number.isRequired,
     onDelete: PropTypes.func.isRequired,
+    showMenu: PropTypes.bool.isRequired,
     alt: PropTypes.string
 };

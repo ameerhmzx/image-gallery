@@ -1,5 +1,5 @@
-import {useParams} from 'react-router-dom';
-import {useCallback, useContext, useEffect, useRef, useState} from "react";
+import {useLocation, useParams} from 'react-router-dom';
+import {useCallback, useContext, useEffect, useMemo, useRef, useState} from "react";
 
 import LoadingContext from "../Context/LoadingContext";
 import ToastContext from "../Context/ToastContext";
@@ -44,6 +44,27 @@ export default function ImagesPage() {
     let {setLoading} = useContext(LoadingContext);
     let {showToast} = useContext(ToastContext);
     let {showAlertDialog} = useContext(AlertDialogContext);
+
+    const location = useLocation();
+    const isShared = useMemo(() => location.pathname.split('/')[1] === 'shared', [location]);
+    let [access, setAccess] = useState(-1);
+
+    useEffect(() => {
+        if(isShared && access === -1){
+            Server
+                .get(`/folder/shared/${folderId}/access`)
+                .then(res => {
+                    setAccess(res.data['access']);
+                })
+                .catch(err => {
+                    showToast({
+                        title: 'Error!',
+                        text: 'Error obtaining permissions for this folder!',
+                        type: 'fail'
+                    });
+                })
+        }
+    }, [isShared, access, showToast, setAccess]);
 
     let [photos, setPhotos] = useState([]);
     let [addImageDialogShow, setAddImageDialogShow] = useState(false);
@@ -229,6 +250,7 @@ export default function ImagesPage() {
                 key={thumb.key || thumb.src}
                 id={thumb.id}
                 src={thumb.thumb}
+                showMenu={(!isShared || access === 1)}
                 // onClick={onClick ? handleClick : null}
                 alt={thumb.key || `undefined`}
                 width={thumb.width}
@@ -260,24 +282,26 @@ export default function ImagesPage() {
                     <div className={`h-14`} ref={nextPageRef}/>
                 </div>
                 {/*FAB*/}
-                <Transition
-                    appear
-                    className={'fixed bottom-0 right-0'}
-                    show={!addImageDialogShow}
-                    enter="transition duration-500 ease-out"
-                    enterFrom="transform scale-75 opacity-0"
-                    enterTo="transform scale-100 opacity-100"
-                    leave="transition duration-300 ease-out"
-                    leaveFrom="transform scale-100 opacity-100"
-                    leaveTo="transform scale-75 opacity-0"
-                >
-                    <div
-                        onClick={() => setAddImageDialogShow(true)}
-                        className='mr-4 mb-6 md:mr-12 md:mb-8 bg-indigo-500 p-3 rounded-full shadow-sm
+                { (!isShared || access === 1) &&
+                    <Transition
+                        appear
+                        className={'fixed bottom-0 right-0'}
+                        show={!addImageDialogShow}
+                        enter="transition duration-500 ease-out"
+                        enterFrom="transform scale-75 opacity-0"
+                        enterTo="transform scale-100 opacity-100"
+                        leave="transition duration-300 ease-out"
+                        leaveFrom="transform scale-100 opacity-100"
+                        leaveTo="transform scale-75 opacity-0"
+                    >
+                        <div
+                            onClick={() => setAddImageDialogShow(true)}
+                            className='mr-4 mb-6 md:mr-12 md:mb-8 bg-indigo-500 p-3 rounded-full shadow-sm
                         hover:shadow-md duration-300 cursor-pointer z-20 hover:bg-indigo-700'>
-                        <PlusIcon className={'w-6 text-white'}/>
-                    </div>
-                </Transition>
+                            <PlusIcon className={'w-6 text-white'}/>
+                        </div>
+                    </Transition>
+                }
             </div>
         </AddImageDialog>
     );

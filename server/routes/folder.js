@@ -393,6 +393,23 @@ router.get('/shared', authenticated, async (req, res, next) => {
     }
 });
 
+// Returns Access for the folder
+router.get('/shared/:fid/access', authenticated, async (req, res, next) => {
+    res.setHeader('Content-Type', 'application/json');
+    try {
+        let folder = await Folder.findOne({_id: req.params.fid, "partners.user": req.user.id});
+
+        let access = folder.partners.filter((partner) => partner.user.toString() === req.user.id.toString())[0]['access'];
+
+        res.status(200).json({
+            status: 'success',
+            access: access
+        });
+    } catch (err) {
+        next(err);
+    }
+});
+
 // Create New Folder
 router.post('/', authenticated, async (req, res, next) => {
     res.setHeader('Content-Type', 'application/json');
