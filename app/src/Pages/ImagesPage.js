@@ -64,7 +64,7 @@ export default function ImagesPage() {
                     });
                 })
         }
-    }, [isShared, access, showToast, setAccess]);
+    }, [isShared, access, showToast, setAccess, folderId]);
 
     let [photos, setPhotos] = useState([]);
     let [addImageDialogShow, setAddImageDialogShow] = useState(false);
