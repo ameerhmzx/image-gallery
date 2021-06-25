@@ -1,7 +1,7 @@
 import {Dialog, Transition} from "@headlessui/react";
-import {ShareIcon} from "@heroicons/react/solid";
+import {ShareIcon, TrashIcon} from "@heroicons/react/solid";
 
-import {Fragment, useContext, useEffect, useState} from "react";
+import {Fragment, useCallback, useContext, useEffect, useState} from "react";
 import FolderOptionContext from "../Context/FolderOptionContext";
 import Server from "../utils/Server";
 import LoadingContext from "../Context/LoadingContext";
@@ -29,27 +29,31 @@ export default function FolderOptionsDialog(props) {
 
     //TODO: update access & delete share
 
+    const loadPartners = useCallback(() => {
+        setShow(true);
+        setLoading(true);
+        Server
+            .get(`/folder/${folder._id}/partners`)
+            .then(res => setPartners(res.data['data']))
+            .catch(() => {
+                showToast({
+                    type: 'fail',
+                    title: 'Failed!',
+                    text: 'Unknown error occurred!'
+                });
+            })
+            .finally(() => {
+                setLoading(false);
+            });
+    }, [folder, setLoading, showToast]);
+
     useEffect(() => {
         if (folder !== undefined && folder._id !== undefined) {
-            setShow(true);
-            setLoading(true);
-            Server
-                .get(`/folder/${folder._id}/partners`)
-                .then(res => setPartners(res.data['data']))
-                .catch(err => {
-                    showToast({
-                        type: 'fail',
-                        title: 'Failed!',
-                        text: 'Unknown error occurred!'
-                    });
-                })
-                .finally(() => {
-                    setLoading(false);
-                });
+            loadPartners();
         } else {
             close();
         }
-    }, [folder, setLoading, showToast]);
+    }, [folder, loadPartners]);
 
     useEffect(() => {
         if (!show)
@@ -110,6 +114,49 @@ export default function FolderOptionsDialog(props) {
         }
     }
 
+    function removePartner(partner) {
+        setLoading(true);
+        Server
+            .delete(`/folder/${folder._id}/partners/${partner["user"]["_id"]}`)
+            .then(() => {
+                loadPartners()
+            })
+            .catch(() => {
+                showToast({
+                    title: 'Error',
+                    text: 'Unable to remove access!',
+                    type: 'fail'
+                });
+            })
+            .finally(() => setLoading(false));
+    }
+
+    function onPartnerAccessUpdate(partner, e) {
+        let newAccess = e.target.value;
+        if (newAccess !== partner.access) {
+            setLoading(true);
+            Server
+                .put(`/folder/${folder._id}/partners/${partner["user"]["_id"]}`, {
+                    access: parseInt(newAccess)
+                })
+                .then(res => {
+                    if (res.status === 200) {
+                        loadPartners();
+                    }
+                })
+                .catch(() => {
+                    showToast({
+                        title: 'Error!',
+                        text: 'Unable to update access!',
+                        type: 'fail'
+                    });
+                })
+                .finally(() =>
+                    setLoading(false)
+                );
+        }
+    }
+
     return (
         <FolderOptionContext.Provider value={{folder: folder, setFolder: setFolder}}>
             <div className={`w-full h-full`}>
@@ -150,33 +197,22 @@ export default function FolderOptionsDialog(props) {
                                 leaveTo="opacity-0 scale-95"
                             >
                                 <div
-                                    className="inline-block w-full max-w-md p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-md">
+                                    className="inline-block w-full max-w-lg p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-md">
                                     <Dialog.Title
                                         as="h3"
-                                        className="text-lg font-medium leading-6 text-gray-900"
+                                        className="text-xl font-medium leading-6 text-gray-900"
                                     >
                                         Folder Options
                                     </Dialog.Title>
                                     <div className="mt-2">
-                                        <p className="text-sm text-gray-500">
+
+                                        <p className="text-sm text-gray-700">
                                             Folder: {folder.name}
                                         </p>
 
-                                        <p className="text-sm text-gray-500">Shared With: </p>
-
-                                        <div className={`flex flex-col`}>
-                                            {
-                                                partners.map((partner) => {
-                                                    return (
-                                                        <div key={partner._id}>{partner.user.email} - {partner.access === 0 ? 'View Only' : 'View / Upload'}</div>
-                                                    );
-                                                })
-                                            }
-                                        </div>
-
-                                        <hr className={`mt-4`}/>
-
                                         <div className="flex flex-col py-4 px-2 space-y-4">
+
+                                            <p className={`text-lg`}>Share</p>
 
                                             <div className={`flex relative`}>
                                                 <span
@@ -201,10 +237,10 @@ export default function FolderOptionsDialog(props) {
                                                     Access Level
                                                     <select
                                                         onChange={onAccessChange}
-                                                        value={partnerEntry.access}
+                                                        value={partnerEntry.access.toString()}
                                                         className={`rounded-md text-gray-700 border-0 ring-1 ring-gray-300`}>
-                                                        <option value={0}>View Only</option>
-                                                        <option value={1}>View / Upload</option>
+                                                        <option value="0">View Only</option>
+                                                        <option value="1">View / Upload</option>
                                                     </select>
                                                 </label>
 
@@ -217,6 +253,40 @@ export default function FolderOptionsDialog(props) {
                                                     Share
                                                 </button>
                                             </div>
+                                        </div>
+
+                                        <div className={`flex flex-col py-4 px-2 space-y-2`}>
+                                            <p className="text-lg mb-4">Shared With: </p>
+                                            {
+                                                partners.map((partner) => {
+                                                    return (
+                                                        <div className={`w-full flex items-center space-x-4`}
+                                                             key={partner._id}>
+                                                            <div>{partner.user.email}</div>
+
+                                                            <div
+                                                                className={`w-full flex items-center justify-end space-x-2`}>
+                                                                <select
+                                                                    onChange={(e) => onPartnerAccessUpdate(partner, e)}
+                                                                    className={`rounded-md text-gray-700 border-0 ring-1 ring-gray-300`} value={partner.access.toString()}>
+                                                                    <option value="0">View Only</option>
+                                                                    <option value="1">View / Upload</option>
+                                                                </select>
+
+                                                                <button
+                                                                    onClick={() => removePartner(partner)}
+                                                                    className=
+                                                                        {`text-white bg-red-700 hover:bg-red-900 
+                                                                    cursor-pointer rounded-md px-4 py-2 items-center 
+                                                                    flex duration-300 self-left`}>
+                                                                    <TrashIcon className={`w-5`}/>
+                                                                </button>
+                                                            </div>
+                                                            <hr className={`my-4`}/>
+                                                        </div>
+                                                    );
+                                                })
+                                            }
                                         </div>
                                     </div>
 

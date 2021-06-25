@@ -252,12 +252,11 @@ router.put('/:folder/partners/:pid', authenticated, async (req, res, next) => {
             return res.sendStatus(403);
 
         for (let partner of folder.partners) {
-            if (partner.user === req.params.pid) {
+            if (partner.user.toString() === req.params.pid.toString()) {
                 partner.access = req.body.access;
-                let data = await folder.save();
+                await folder.save();
                 return res.status(200).json({
-                    status: 'success',
-                    data: data
+                    status: 'success'
                 });
             }
         }
